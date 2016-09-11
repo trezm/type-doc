@@ -4,6 +4,8 @@
   "description": "Static typechecking in valid javascript",
   "main": "dist/main.js",
   "scripts": {
+    "build:dev": "node_modules/.bin/gulp build:dev",
+    "parser": "./bin/build-parser.sh",
     "test": "gulp test",
     "start": "gulp; node dist/main.js"
   },
