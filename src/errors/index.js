@@ -1,2 +1,2 @@
-export { TypeDocError } from './error';
+export { TypeDocError } from './typeDocError';
 export { TypeMismatchError } from './typeMismatchError';

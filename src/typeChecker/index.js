@@ -1,0 +1,1 @@
+export { typeChecker } from './typeChecker';

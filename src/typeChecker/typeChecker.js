@@ -4,7 +4,7 @@ import {
   TypeMismatchError
 } from './errors';
 
-export function typeChecker(input /* t:string */) {
+export function typeChecker(input /* t:string */) /* t:TypeDocError */ {
   const ast /* t:object */ = parser.parse(input);
 
   let functionsToCheck;
@@ -23,11 +23,7 @@ export function typeChecker(input /* t:string */) {
   // Filter undefined results
   errors = errors.filter((error) => Boolean(error));
 
-  if (errors) {
-    errors.forEach((error) => console.log(error.toString()));
-  } else {
-    console.log('No type errors!');
-  }
+  return errors;
 }
 
 function _findFunctions(statements /* t:[Object] */) /* t:[Object] */ {

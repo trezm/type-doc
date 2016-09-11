@@ -5,6 +5,7 @@ Type checking with valid JavaScript
 ## Table of Contents
 - [Setup](#setup)
 - [What Works?](#what-works-right-now)
+- [TODO](#todo)
 
 ## Setup
 Setup is still a little jenky, right now you have to run the following in order to set it up _once_.
@@ -45,3 +46,13 @@ function subtractTwo(x /* t:number */) /* t:string */ {
 ```
 
 Right now if you just run `node test.js` you can see what's currently working :)
+
+## TODO
+
+- [ ] Move the TODO to actual github issues
+- [ ] Improve grammar to cover more cases
+- [ ] Create a test suite
+- [ ] Clean and break up the `typeChecker`
+  - Should be using more explicit containers for intermediate states, i.e. scopes and parent scopes.
+- [ ] Implement understanding of classes and subclasses
+

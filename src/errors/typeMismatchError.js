@@ -1,4 +1,4 @@
-import { TypeDocError } from './error';
+import { TypeDocError } from './typeDocError';
 
 export class TypeMismatchError extends TypeDocError {
   constructor(message /* t:string */, extras /* t:any */) {
