@@ -1,7 +1,8 @@
 export class Scope {
-  constructor(parentScope /* t:Scope? */, declarations=[] /* t:any */) {
+  constructor(parentScope /* t:Scope? */, declarations=[] /* t:any */, assignments=[] /* t:any */) {
     this.parentScope = parentScope;
     this.declarations = declarations;
+    this.assignments = assignments;
   }
 }
 
@@ -12,5 +13,10 @@ export function generateScope(statements /* t:[Object] */) /* t:Scope */ {
       statement.name === 'argument'
     });
 
-  return new Scope(null, declarations);
+  const assignments = statements.filter((statement) => {
+    return statement.name === 'assignment' ||
+      statement.name === 'classDeclaration';
+    });
+
+  return new Scope(null, declarations, assignments);
 }

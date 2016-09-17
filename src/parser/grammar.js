@@ -7,6 +7,7 @@ export const grammar = {
       ['\\//[^\\n]*', '/* skip newline comments */'],
       ['var|let|const', 'return "DECLARATION";'],
       ['class', 'return "CLASS_DECLARATION";'],
+      ['new', 'return "NEW";'],
       ['function', 'return "FUNCTION";'],
       ['return', 'return "RETURN";'],
       ['\\(', 'return "OPEN_PAREN";'],
@@ -20,6 +21,9 @@ export const grammar = {
       [';', 'return "SEMICOLON";'],
       ['\\.', 'return "PERIOD";'],
       [',', 'return "COMMA";'],
+      ['\'[^\']*\'', 'return "STRING";'],
+      ['"[^"]"', 'return "STRING";'],
+      ['[0-9]+', 'return "NUMBER";'],
       ['t:[a-zA-Z0-9\\_\\$]+', 'return "TYPEDEF";'],
       ['[a-zA-Z0-9\\_\\$]+', 'return "WORD";']
     ]
@@ -30,11 +34,15 @@ export const grammar = {
       ['statementList', 'return $$ = $1']
     ],
     assignment: [
-      ['WORD EQ expr', '$$ = {name: "declaration", var: $1, line: yylineno}']
+      ['WORD EQ expr', '$$ = {name: "assignment", var: $1, assignment: $3, line: yylineno}']
+    ],
+    classInstantiation: [
+      ['NEW WORD OPEN_PAREN CLOSE_PAREN', '$$ = {name: "classInstantiation", type: $2, line: yylineno}'],
+      ['NEW WORD OPEN_PAREN arguments CLOSE_PAREN', '$$ = {name: "classInstantiation", type: $2, arguments: $3, line: yylineno}']
     ],
     declaration: [
       ['DECLARATION WORD EQ expr', '$$ = {name: "declaration", var: $2, assignment: $4, line: yylineno}'],
-      ['DECLARATION WORD type EQ expr', '$$ = {name: "declaration", var: $2, type: $3, assignment: $4, line: yylineno}'],
+      ['DECLARATION WORD type EQ expr', '$$ = {name: "declaration", var: $2, type: $3, assignment: $5, line: yylineno}'],
       ['DECLARATION WORD', '$$ = {name: "declaration", var: $2, line: yylineno}'],
       ['DECLARATION WORD type', '$$ = {name: "declaration", var: $2, type: $3, line: yylineno}']
     ],
@@ -42,18 +50,26 @@ export const grammar = {
       ['BEGIN_COMMENT TYPEDEF END_COMMENT', '$$ = $2.substr(2)'],
     ],
     typeDeclaration: [
-      ['CLASS_DECLARATION WORD block', '$$ = {name: "classDeclaration", arguments: $2, block: $3, line: yylineno}']
+      ['CLASS_DECLARATION WORD OPEN_BRACKET CLOSE_BRACKET', '$$ = {name: "classDeclaration", arguments: $2, line: yylineno}']
     ],
     arguments: [
       ['WORD', '$$ = [{name: "argument", var: $1, line: yylineno}]'],
+      ['constant', '$$ = [{name: "argument", var: $1, line: yylineno}]'],
       ['WORD type', '$$ = [{name: "argument",  var: $1, type: $2, line: yylineno}]'],
       ['WORD COMMA arguments', '$$ = $3; $3.unshift({name: "argument", var: $1, line: yylineno})'],
+      ['constant COMMA arguments', '$$ = $3; $3.unshift({name: "argument", var: $1, line: yylineno})'],
       ['WORD type COMMA arguments', '$$ = $4; $4.unshift({name: "argument",  var: $1, type: $2, line: yylineno})']
+    ],
+    constant: [
+      ['STRING', '$$ = {name: "constant", type: "string", val: $1.replace(/(^.)?(.$)?/g, ""), line: yylineno}'],
+      ['NUMBER', '$$ = {name: "constant", type: "number", val: $1, line: yylineno}']
     ],
     expr: [
       ['WORD', '$$ = $1'],
       ['function', '$$ = $1'],
-      ['functionCall', '$$ = $1']
+      ['functionCall', '$$ = $1'],
+      ['classInstantiation', '$$ = $1'],
+      ['constant', '$$ = $1']
     ],
     statement: [
       ['declaration', '$$ = $1'],
