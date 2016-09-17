@@ -29,6 +29,9 @@ export const grammar = {
     start: [
       ['statementList', 'return $$ = $1']
     ],
+    assignment: [
+      ['WORD EQ expr', '$$ = {name: "declaration", var: $1, line: yylineno}']
+    ],
     declaration: [
       ['DECLARATION WORD EQ expr', '$$ = {name: "declaration", var: $2, assignment: $4, line: yylineno}'],
       ['DECLARATION WORD type EQ expr', '$$ = {name: "declaration", var: $2, type: $3, assignment: $4, line: yylineno}'],
@@ -56,6 +59,8 @@ export const grammar = {
       ['declaration', '$$ = $1'],
       ['operator', '$$ = $1'],
       ['expr', '$$ = $1'],
+      ['assignment', '$$ = $1'],
+      ['typeDeclaration', '$$ = $1'],
       ['RETURN operator', '$$ = {name: "return", val: $2, line: yylineno}'],
       ['RETURN expr', '$$ = {name: "return", val: $2, line: yylineno}']
     ],

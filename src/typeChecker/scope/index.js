@@ -1,1 +1,4 @@
-export { Scope } from './scope';
+export {
+  generateScope,
+  Scope
+} from './scope';

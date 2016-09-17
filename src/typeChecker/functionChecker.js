@@ -1,5 +1,5 @@
 import { Block } from './block';
-import { Scope } from './scope';
+import { generateScope, Scope } from './scope';
 import {
   TypeMismatchError
 } from '../errors';
@@ -12,7 +12,7 @@ export function checkFunctions(scope /* t:Scope */) /* t:[TypeDocError] */ {
     .filter((declaration) => declaration.name === 'function')
     .map((functionDeclaration) => {
       let statements = functionDeclaration.arguments.concat(functionDeclaration.block.contents);
-      let functionScope = _generateScope(statements);
+      let functionScope = generateScope(statements);
 
       functionScope.parentScope = scope;
 
