@@ -10,7 +10,7 @@ gulp.task('build:dev', () => {
 });
 
 gulp.task('test', ['build:dev'], () => {
-  return gulp.src('./dist/**/*.spec.js', {
+  return gulp.src(['dist/**/*.spec.js', 'dist/integrationTests/**/*.js'], {
       read: false
     })
     .pipe(plugins.plumber())

@@ -4,7 +4,9 @@ export const grammar = {
   "lex": {
     rules: [
       ["\\s+", "/* skip whitespace */"],
-      ["var|let|const", "return 'DECLARATION';"],
+      ['\\//[^\\n]*', '/* skip newline comments */'],
+      ['var|let|const', 'return "DECLARATION";'],
+      ['class', 'return "CLASS_DECLARATION";'],
       ['function', 'return "FUNCTION";'],
       ['return', 'return "RETURN";'],
       ['\\(', 'return "OPEN_PAREN";'],
@@ -35,6 +37,9 @@ export const grammar = {
     ],
     type: [
       ['BEGIN_COMMENT TYPEDEF END_COMMENT', '$$ = $2.substr(2)'],
+    ],
+    typeDeclaration: [
+      ['CLASS_DECLARATION WORD block', '$$ = {name: "classDeclaration", arguments: $2, block: $3, line: yylineno}']
     ],
     arguments: [
       ['WORD', '$$ = [{name: "argument", var: $1, line: yylineno}]'],
