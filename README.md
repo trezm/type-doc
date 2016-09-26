@@ -11,7 +11,7 @@ Type checking with valid JavaScript
 Setup is still a little jenky, right now you have to run the following in order to set it up _once_.
 
 ```
-> gulp build:dev; ./bin/build-parser.sh; gulp build:dev
+> npm run setup
 ```
 
 After that, all you have to do is

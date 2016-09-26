@@ -10,6 +10,10 @@ export const grammar = {
       ['new', 'return "NEW";'],
       ['function', 'return "FUNCTION";'],
       ['return', 'return "RETURN";'],
+      ['import', 'return "IMPORT";'],
+      ['export', 'return "EXPORT";'],
+      ['require', 'return "REQUIRE";'],
+      ['from', 'return "FROM";'],
       ['\\(', 'return "OPEN_PAREN";'],
       ['\\)', 'return "CLOSE_PAREN";'],
       ['\\{', 'return "OPEN_BRACKET";'],
@@ -46,6 +50,15 @@ export const grammar = {
       ['DECLARATION WORD', '$$ = {name: "declaration", var: $2, line: yylineno}'],
       ['DECLARATION WORD type', '$$ = {name: "declaration", var: $2, type: $3, line: yylineno}']
     ],
+    export: [
+      ['EXPORT declaration', '$$ = {name: "export", val: $2, line: yylineno}'],
+      ['EXPORT typeDeclaration', '$$ = {name: "export", val: $2, line: yylineno}'],
+      ['EXPORT function', '$$ = {name: "export", val: $2, line: yylineno}']
+    ],
+    import: [
+      ['IMPORT OPEN_BRACKET WORD CLOSE_BRACKET FROM STRING', '$$ = {name: "import", var: $3, from: $6, line: yylineno}'],
+      ['IMPORT WORD FROM STRING', '$$ = {name: "import", var: $2, from: $4, line: yylineno}']
+    ],
     type: [
       ['BEGIN_COMMENT TYPEDEF END_COMMENT', '$$ = $2.substr(2)'],
     ],
@@ -77,6 +90,8 @@ export const grammar = {
       ['expr', '$$ = $1'],
       ['assignment', '$$ = $1'],
       ['typeDeclaration', '$$ = $1'],
+      ['import', '$$ = $1'],
+      ['export', '$$ = $1'],
       ['RETURN operator', '$$ = {name: "return", val: $2, line: yylineno}'],
       ['RETURN expr', '$$ = {name: "return", val: $2, line: yylineno}']
     ],
