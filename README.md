@@ -4,6 +4,7 @@ Type checking with valid JavaScript
 
 ## Table of Contents
 - [Setup](#setup)
+- [cli](#cli)
 - [What Works?](#what-works-right-now)
 - [TODO](#todo)
 
@@ -18,6 +19,17 @@ After that, all you have to do is
 
 ```
 > gulp build:dev
+```
+
+## CLI
+TypeDoc has a basic cli for testing files. You can run it by running
+```
+> bin/type-doc <some-file>
+```
+
+For example,
+```
+> bin/type-doc ./examples/importDirectory.test.js
 ```
 
 ## What works right now?

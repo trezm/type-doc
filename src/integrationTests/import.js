@@ -62,9 +62,75 @@ var s /* t:string */ = test
       }[file];
     });
 
-    const errors = loader('main').errors;
+    const errors = loader('main').importedFiles[0].errors;
 
     expect(errors[0].extras.expectedType).to.equal('string');
     expect(errors[0].extras.actualType).to.equal('number');
+  });
+
+  it('should handle multiple imports', () => {
+    const readFileSyncStub = sandbox.stub(fs, 'readFileSync', (file) => {
+      return {
+        './test': `
+let aNumber /* t:number */ = 3;
+export const test1 /* t:string */ = aNumber;
+export const test2 /* t:string */ = aNumber;
+`,
+        'main': `
+import { test1, test2 } from './test';
+`
+      }[file];
+    });
+
+    const errors = loader('main').importedFiles[0].errors;
+
+    expect(errors[0].extras.expectedType).to.equal('string');
+    expect(errors[0].extras.actualType).to.equal('number');
+    expect(errors[1].extras.expectedType).to.equal('string');
+    expect(errors[1].extras.actualType).to.equal('number');
+  });
+
+  it('should handle multiple with different types', () => {
+    const readFileSyncStub = sandbox.stub(fs, 'readFileSync', (file) => {
+      return {
+        './test': `
+export const test1 /* t:string */ = 'asdf';
+export const test2 /* t:number */ = 1;
+`,
+        'main': `
+import { test1, test2 } from './test';
+
+const thing1 /* t:number */ = test1;
+const thing2 /* t:string */ = test2;
+`
+      }[file];
+    });
+
+    const errors = loader('main').errors;
+
+    expect(errors[0].extras.actualType).to.equal('string');
+    expect(errors[0].extras.expectedType).to.equal('number');
+    expect(errors[1].extras.expectedType).to.equal('string');
+    expect(errors[1].extras.actualType).to.equal('number');
+  });
+
+  it('should handle aliases with different types', () => {
+    const readFileSyncStub = sandbox.stub(fs, 'readFileSync', (file) => {
+      return {
+        './test': `
+export const test1 /* t:string */ = 'asdf';
+`,
+        'main': `
+import { test1 as test2 } from './test';
+
+const thing1 /* t:number */ = test2;
+`
+      }[file];
+    });
+
+    const errors = loader('main').errors;
+
+    expect(errors[0].extras.actualType).to.equal('string');
+    expect(errors[0].extras.expectedType).to.equal('number');
   });
 });
