@@ -20,9 +20,11 @@
     "gulp-load-plugins": "1.2.4",
     "gulp-mocha": "3.0.1",
     "gulp-plumber": "1.1.0",
-    "jison": "^0.4.17",
+    "jison": "^.4.17",
     "mocha": "3.0.2",
     "sinon": "1.17.5"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "jshint": "2.9.3"
+  }
 }
