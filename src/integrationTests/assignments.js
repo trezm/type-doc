@@ -3,7 +3,7 @@ import { expect } from 'chai';
 import { typeChecker } from '../typeChecker';
 
 describe('assignments', () => {
-  it.skip('should detect errors with numbers', () => {
+  it('should detect errors with numbers', () => {
     const errors = typeChecker(`
 var n /* t:number */;
 n = 'asdf';
