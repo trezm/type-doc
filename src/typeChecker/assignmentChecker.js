@@ -18,8 +18,6 @@ export function checkAssignments(scope /* t:Scope */) /* t:[TypeDocError] */ {
 }
 
 function _checkAssignment(assignment /* t:Object */, scope /* t:Scope */) /* t:[TypeDocError] */ {
-  console.log('assignment:', assignment);
-
   const declaration = scope.declarations
     .find((declaration) => declaration.var === assignment.var);
 

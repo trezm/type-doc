@@ -24,6 +24,7 @@ export const grammar = {
       ['=', 'return "EQ";'],
       ['[\\+\\-\\*\\/(===)(!==)(==)(!=)]', 'return "OPERATOR";'],
       [';', 'return "SEMICOLON";'],
+      [':', 'return "COLON";'],
       ['\\.', 'return "PERIOD";'],
       [',', 'return "COMMA";'],
       ['\'[^\']*\'', 'return "STRING";'],
@@ -76,21 +77,30 @@ export const grammar = {
     ],
     arguments: [
       ['expr', '$$ = [{name: "argument", var: $1, line: yylineno}]'],
-      ['WORD type', '$$ = [{name: "argument",  var: $1, type: $2, line: yylineno}]'],
-      ['WORD COMMA arguments', '$$ = $3; $3.unshift({name: "argument", var: $1, line: yylineno})'],
-      ['constant COMMA arguments', '$$ = $3; $3.unshift({name: "argument", var: $1, line: yylineno})'],
-      ['WORD type COMMA arguments', '$$ = $4; $4.unshift({name: "argument",  var: $1, type: $2, line: yylineno})']
+      ['expr type', '$$ = [{name: "argument",  var: $1, type: $2, line: yylineno}]'],
+      ['expr COMMA arguments', '$$ = $3; $3.unshift({name: "argument", var: $1, line: yylineno})'],
+      ['expr type COMMA arguments', '$$ = $4; $4.unshift({name: "argument",  var: $1, type: $2, line: yylineno})']
     ],
     constant: [
       ['STRING', '$$ = {name: "constant", type: "string", val: $1.replace(/(^.)?(.$)?/g, ""), line: yylineno}'],
       ['NUMBER', '$$ = {name: "constant", type: "number", val: $1, line: yylineno}']
     ],
+    pojo: [
+      ['OPEN_BRACKET CLOSE_BRACKET', '$$ = {name: "pojo", type: "any", val: {}, line: yylineno}'],
+      ['OPEN_BRACKET keyValues CLOSE_BRACKET', '$$ = {name: "pojo", type: "any", val: $2, line: yylineno}']
+    ],
+    keyValues: [
+      ['WORD COLON expr', '$$ = {}; $$[$1] = $3'],
+      ['WORD COLON expr COMMA keyValue', '$$ = $5; $5[$1] = $3']
+    ],
     expr: [
-      ['WORD', '$$ = $1'],
       ['function', '$$ = $1'],
       ['functionCall', '$$ = $1'],
       ['classInstantiation', '$$ = $1'],
-      ['constant', '$$ = $1']
+      ['constant', '$$ = $1'],
+      ['pojo', '$$ = $1'],
+      ['propertyAccess', '$$ = $1'],
+      ['WORD', '$$ = $1']
     ],
     statement: [
       ['declaration', '$$ = $1'],
@@ -124,6 +134,10 @@ export const grammar = {
       ['FUNCTION OPEN_PAREN arguments CLOSE_PAREN type block','$$ = {name: "function", arguments: $3, type: $5, block: $6, line: yylineno}'],
       ['FUNCTION WORD OPEN_PAREN arguments CLOSE_PAREN block','$$ = {name: "function", var: $2, arguments: $4, block: $6, line: yylineno}'],
       ['FUNCTION WORD OPEN_PAREN arguments CLOSE_PAREN type block', '$$ = {name: "function", var: $2, arguments: $4, type: $6, block: $7, line: yylineno}']
+    ],
+    propertyAccess: [
+      ['WORD PERIOD propertyAccess', '$$ = $1 + "." + $3'],
+      ['WORD PERIOD WORD', '$$ = $1 + "." + $3']
     ]
   }
 };
