@@ -1,30 +1,31 @@
 import { readFileSync } from './fsWrapper';
 import { parser } from '../../parser'
 import { typeChecker } from '../../typeChecker';
+import { File } from './file';
 
 export function readFile(fileName /* t:string */) /* t:{ ast: ast, errors: [TypeDocError] } */ {
   const fileContents = readFileSync(fileName);
   const statements = parser.parse(fileContents);
+  let currentDirectory = fileName.split('/');
 
   // Filter imports
   const imports = statements.filter((statement) => statement.name === 'import');
-  const importResults = imports.map((anImport) => readFile(anImport.from.replace(/['"]/g, '')));
-  const asts = importResults
-    .map((importResult) => importResult.ast);
+  const importedFiles = imports.map((anImport) => {
+    currentDirectory.pop();
+    currentDirectory.push(anImport.from.replace(/['"]/g, ''));
+    return readFile(currentDirectory.join('/'));
+  });
+  const asts = importedFiles
+    .map((importedFile) => importedFile.ast);
 
-  let errors = importResults
-    .map((importResult) => importResult.errors)
-    .reduce((a, b) => a.concat(b), []);
-  const exportedStatements = _filterExportsFromAsts(asts);
+  let exportedStatements = _filterExportsFromAsts(asts);
+  exportedStatements = _mapImportAliases(exportedStatements, imports);
 
   // Now we have the exported statements, so add that to the current statements and run the typechecker on it.
   const allStatements = exportedStatements.concat(statements.filter((statement) => statement.name !== 'import'));
-  errors = errors.concat(typeChecker(allStatements));
+  const errors = typeChecker(allStatements);
 
-  return {
-    ast: allStatements,
-    errors: errors
-  };
+  return new File(fileName, allStatements, errors, importedFiles);
 }
 
 function _filterExportsFromAsts(asts /* t:[Object] */) {
@@ -34,4 +35,23 @@ function _filterExportsFromAsts(asts /* t:[Object] */) {
         .map((exportStatement) => exportStatement.val);
     })
     .reduce((a, b) => a.concat(b), []);
+}
+
+function _mapImportAliases(asts /* t:[Object] */, imports /* t:[Object] */) {
+  imports
+    .forEach((anImportStatement) => {
+      anImportStatement
+        .imports
+        .filter((anImport) => Boolean(anImport.exportName))
+        .forEach((anImport) => {
+          const importDeclaration = asts
+            .find((statement) => {
+              return statement.name === 'declaration' &&
+                statement.var === anImport.exportName;
+            });
+          importDeclaration.var = anImport.var;
+        });
+    });
+
+  return asts;
 }

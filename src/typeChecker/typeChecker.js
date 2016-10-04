@@ -1,6 +1,7 @@
 import { Block } from './block';
 import { parser } from '../parser';
 import { generateScope, Scope } from './scope';
+import { checkAssignments } from './assignmentChecker';
 import { checkFunctions } from './functionChecker';
 import { checkDeclarations } from './declarationChecker';
 
@@ -18,6 +19,7 @@ export function typeChecker(input /* t:string | [Object] */) /* t:[TypeDocError]
 
   errors = errors.concat(checkFunctions(rootScope));
   errors = errors.concat(checkDeclarations(rootScope));
+  errors = errors.concat(checkAssignments(rootScope));
 
   return errors;
 }

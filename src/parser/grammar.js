@@ -6,6 +6,7 @@ export const grammar = {
       ["\\s+", "/* skip whitespace */"],
       ['\\//[^\\n]*', '/* skip newline comments */'],
       ['var|let|const', 'return "DECLARATION";'],
+      ['as', 'return "AS";'],
       ['class', 'return "CLASS_DECLARATION";'],
       ['new', 'return "NEW";'],
       ['function', 'return "FUNCTION";'],
@@ -21,7 +22,7 @@ export const grammar = {
       ['/\\*', 'return "BEGIN_COMMENT";'],
       ['\\*/', 'return "END_COMMENT";'],
       ['=', 'return "EQ";'],
-      ['[\\+\\-\\*\\/]', 'return "OPERATOR";'],
+      ['[\\+\\-\\*\\/(===)(!==)(==)(!=)]', 'return "OPERATOR";'],
       [';', 'return "SEMICOLON";'],
       ['\\.', 'return "PERIOD";'],
       [',', 'return "COMMA";'],
@@ -56,8 +57,16 @@ export const grammar = {
       ['EXPORT function', '$$ = {name: "export", val: $2, line: yylineno}']
     ],
     import: [
-      ['IMPORT OPEN_BRACKET WORD CLOSE_BRACKET FROM STRING', '$$ = {name: "import", var: $3, from: $6, line: yylineno}'],
+      ['IMPORT OPEN_BRACKET importList CLOSE_BRACKET FROM STRING', '$$ = {name: "import", imports: $3, from: $6, line: yylineno}'],
       ['IMPORT WORD FROM STRING', '$$ = {name: "import", var: $2, from: $4, line: yylineno}']
+    ],
+    singleImport: [
+      ['WORD', '$$ = {var: $1}'],
+      ['WORD AS WORD', '$$ = {exportName: $1, var: $3}']
+    ],
+    importList: [
+      ['singleImport', '$$ = [$1]'],
+      ['singleImport COMMA importList', '$$ = $3; $3.unshift($1)']
     ],
     type: [
       ['BEGIN_COMMENT TYPEDEF END_COMMENT', '$$ = $2.substr(2)'],
@@ -66,8 +75,7 @@ export const grammar = {
       ['CLASS_DECLARATION WORD OPEN_BRACKET CLOSE_BRACKET', '$$ = {name: "classDeclaration", arguments: $2, line: yylineno}']
     ],
     arguments: [
-      ['WORD', '$$ = [{name: "argument", var: $1, line: yylineno}]'],
-      ['constant', '$$ = [{name: "argument", var: $1, line: yylineno}]'],
+      ['expr', '$$ = [{name: "argument", var: $1, line: yylineno}]'],
       ['WORD type', '$$ = [{name: "argument",  var: $1, type: $2, line: yylineno}]'],
       ['WORD COMMA arguments', '$$ = $3; $3.unshift({name: "argument", var: $1, line: yylineno})'],
       ['constant COMMA arguments', '$$ = $3; $3.unshift({name: "argument", var: $1, line: yylineno})'],
