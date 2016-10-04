@@ -15,8 +15,7 @@ export function generateScope(statements /* t:[Object] */) /* t:Scope */ {
     });
 
   const assignments = statements.filter((statement) => {
-    return statement.name === 'assignment' ||
-      statement.name === 'classDeclaration';
+      return statement.name === 'assignment';
     });
 
   return new Scope(null, declarations, assignments);

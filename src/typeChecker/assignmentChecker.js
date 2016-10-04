@@ -12,21 +12,27 @@ import {
  */
 export function checkAssignments(scope /* t:Scope */) /* t:[TypeDocError] */ {
   const assignments = scope.assignments
-    .filter((declaration) => declaration.name === 'declaration' ||
-      declaration.name === 'assignment')
-      map((assignment) => {
-        console.log('assignment:', assignment);
-      });
-  //   .map((functionDeclaration) => {
-  //     let statements = functionDeclaration.arguments.concat(functionDeclaration.block.contents);
-  //     let functionScope = _generateScope(statements);
+    .map((assignment) => _checkAssignment(assignment, scope));
 
-  //     functionScope.parentScope = scope;
+  return assignments;
+}
 
-  //     return checkVariables(functionScope).concat([_checkFunctionReturnValue(functionDeclaration, functionScope)]);
-  //   })
-  //   .reduce((a, b) => a.concat(b), [])
-  //   .filter((error) => Boolean(error));
+function _checkAssignment(assignment /* t:Object */, scope /* t:Scope */) /* t:[TypeDocError] */ {
+  console.log('assignment:', assignment);
 
-  // return functionDeclarations || [];
+  const declaration = scope.declarations
+    .find((declaration) => declaration.var === assignment.var);
+
+  if (!declaration) {
+    throw new Error('Could not find delcaration');
+  }
+
+  if (assignment.assignment.type !== declaration.type) {
+    return new TypeMismatchError(`Type mismatch in assignment ${assignment.var} on line ${assignment.line}`, {
+      expectedType: declaration.type,
+      actualType: assignment.assignment.type
+    });
+  }
+
+  return undefined;
 }
