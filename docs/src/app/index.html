@@ -19,5 +19,29 @@
 </head>
 <body>
   <h1>Welcome to them docs playa</h1>
+  <input type="file" id="typedoc-import">
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      /**
+       * set up handling of file input to POST to server
+       */
+      (function() {
+        var fileInput = document.getElementById('typedoc-import');
+
+        fileInput.addEventListener('change', function(event) {
+          var reader = new FileReader();
+
+          reader.onload = function(evt) {
+            var fileContents = evt.target.result;
+
+            console.log(fileContents);
+          };
+
+          reader.readAsText(this.files[0]);
+        })
+      })();
+    });
+  </script>
 </body>
 </html>
