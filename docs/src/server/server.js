@@ -8,6 +8,8 @@ const chalk = require('chalk');
 const fs = require('fs');
 const path = require('path');
 
+const checker = require('../../dist/typeChecker').typeChecker;
+
 let server = http.createServer(handleRequest);
 const serverDirectory = path.resolve(__dirname);
 console.log( chalk.blue('%s is the current directory'), serverDirectory );
@@ -35,6 +37,29 @@ function handleRequest(request, response) {
         console.log( chalk.green('%s request made to %s took %dms'), request.method, request.url, (Date.now()) - start);
       }
 	  });
+  } else if (request.url === '/validate') {
+    let body = [];
+    request.on('data', function(chunk) {
+      body.push(chunk);
+    }).on('end', function() {
+      body = Buffer.concat(body).toString();
+      body = JSON.parse(body);
+
+      try {
+        checker(body.input);
+
+        response.writeHead(200, { 'Content-Type': 'application/json' });
+        response.end();
+
+        console.log( chalk.green('%s request made to %s took %dms'), request.method, request.url, (Date.now()) - start);
+      } catch (err) {
+        response.writeHead(400);
+        response.end();
+        console.log( chalk.red('%s request made to %s took %dms and responded with %s'), request.method, request.url, (Date.now()) - start, '400');
+        console.log( chalk.red('Error validating file :: %s'), err.message);
+      }
+
+    });
   } else {
     response.end('Hmmm doesnt seem to be anything at: ' + request.url);
     console.log( chalk.red('%s request made to %s took %dms but found no registered route'), request.method, request.url, (Date.now()) - start);
