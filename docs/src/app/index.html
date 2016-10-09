@@ -19,7 +19,15 @@
 </head>
 <body>
   <h1>Welcome to them docs playa</h1>
-  <input type="file" id="typedoc-import">
+
+  <h3>Upload a file to validate it!</h3>
+  <div>
+    <input type="file" id="typedoc-import">
+  </div>
+
+  <h3>Or type some code below</h3>
+  <textarea id="typedoc-textarea"></textarea>
+  <button type="button" id="typedoc-validate">Validate</button>
 
   <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -34,37 +42,57 @@
 
           reader.onload = function(evt) {
             var fileContents = evt.target.result;
-            var request = new Promise(function(resolve, reject) {
-              let xhr = new XMLHttpRequest();
-              let endpoint = 'http://localhost:3000/validate';
 
-              xhr.open('POST', endpoint, true);
-              xhr.setRequestHeader('Content-type', 'application/json');
-              xhr.setRequestHeader('Accept', 'application/json');
-              xhr.onreadystatechange = function() {
-                if (xhr.status === 200 && xhr.readyState === 3) {
-                  resolve(JSON.parse(xhr.responseText));
-                } else if (xhr.status !== 200 && xhr.readyState === 3) {
-                  reject();
-                }
-
-                // TODO: handle other error cases
-              };
-              xhr.send(JSON.stringify({
-                input: fileContents
-              }));
-            });
-
-            request.then(function(data) {
-              console.log(data);
-            }).catch(function(err) {
-              console.error(err);
-            });
+            validateInput(fileContents);
           };
 
           reader.readAsText(this.files[0]);
         })
       })();
+
+      /**
+       * Set up handling of clicking validate button with textarea input
+       */
+      (function() {
+        var textInput = document.getElementById('typedoc-textarea');
+        var validateButton = document.getElementById('typedoc-validate');
+
+        validateButton.addEventListener('click', function(event) {
+          validateInput(textInput.value);
+        });
+      })();
+
+      /**
+       * Function to call API and validate the file input
+       */
+      function validateInput(input) {
+        var request = new Promise(function(resolve, reject) {
+          let xhr = new XMLHttpRequest();
+          let endpoint = 'http://localhost:3000/validate';
+
+          xhr.open('POST', endpoint, true);
+          xhr.setRequestHeader('Content-type', 'application/json');
+          xhr.setRequestHeader('Accept', 'application/json');
+          xhr.onreadystatechange = function() {
+            if (xhr.status === 200 && xhr.readyState === 3) {
+              resolve(JSON.parse(xhr.responseText));
+            } else if (xhr.status !== 200 && xhr.readyState === 3) {
+              reject();
+            }
+
+            // TODO: handle other error cases
+          };
+          xhr.send(JSON.stringify({
+            input: input
+          }));
+        });
+
+        request.then(function(data) {
+          console.log(data);
+        }).catch(function(err) {
+          console.error(err);
+        });
+      }
     });
   </script>
 </body>
