@@ -1,6 +1,6 @@
 const gulp = require('gulp');
 const plugins = require('gulp-load-plugins')();
-const clean = require('gulp-clean');
+const clean = plugins.clean;
 const sequence = require('run-sequence');
 
 gulp.task('build:dev', () => {

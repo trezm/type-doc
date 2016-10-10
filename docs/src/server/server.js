@@ -29,11 +29,13 @@ function handleRequest(request, response) {
       if (error) {
         response.writeHead(404);
         response.end();
+
         console.log( chalk.red('%s request made to %s took %dms and responded with %s'), request.method, request.url, (Date.now()) - start, '404');
         console.log( chalk.red('error occurred %s'), error.message);
       } else {
         response.writeHead(200, { 'Content-Type': 'text/html' });
         response.end(content, 'utf-8');
+
         console.log( chalk.green('%s request made to %s took %dms'), request.method, request.url, (Date.now()) - start);
       }
 	  });
@@ -46,15 +48,21 @@ function handleRequest(request, response) {
       body = JSON.parse(body);
 
       try {
-        checker(body.input);
+        const results = checker(body.input).map((error) => error.toString());
 
         response.writeHead(200, { 'Content-Type': 'application/json' });
+        response.write(JSON.stringify({ errors: results }));
         response.end();
 
         console.log( chalk.green('%s request made to %s took %dms'), request.method, request.url, (Date.now()) - start);
       } catch (err) {
-        response.writeHead(400);
+        let errors = [];
+        errors.push(err);
+
+        response.writeHead(200);
+        response.write(JSON.stringify({ errors: errors }));
         response.end();
+
         console.log( chalk.red('%s request made to %s took %dms and responded with %s'), request.method, request.url, (Date.now()) - start, '400');
         console.log( chalk.red('Error validating file :: %s'), err.message);
       }
@@ -62,6 +70,7 @@ function handleRequest(request, response) {
     });
   } else {
     response.end('Hmmm doesnt seem to be anything at: ' + request.url);
+
     console.log( chalk.red('%s request made to %s took %dms but found no registered route'), request.method, request.url, (Date.now()) - start);
   }
 }
