@@ -47,5 +47,5 @@ var hi /* t:number */ = greeting;
       expect(errors[0].extras.expectedType).to.equal('number');
       expect(errors[0].extras.actualType).to.equal('string');
     });
-  })
+  });
 });

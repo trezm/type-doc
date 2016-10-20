@@ -6,7 +6,8 @@ const sequence = require('run-sequence');
 gulp.task('build:dev', () => {
   return gulp.src('src/**/*.js')
     .pipe(plugins.babel({
-      presets: ['es2015']
+      presets: ['es2015'],
+      sourceMaps: 'inline'
     }))
     .pipe(gulp.dest('dist'));
 });

@@ -21,7 +21,7 @@ function subtract(x /* t:number */, y /* t:number */) /* t:number */ {
     it('should throw errors if arguments are returned and the type is wrong', () => {
       const errors = typeChecker(`
 function multiply(x /* t:number */, y /* t:number */) /* t:string */ {
-  return x + y;
+  return x * y;
 }`);
 
       expect(errors).to.exist;
@@ -85,17 +85,17 @@ function a(x /* t:string */) /* t:string */ {       // 2
     });
 
     it('should identify type errors from functions in functions declared in parent scopes', () => {
-      const errors = typeChecker(`                  // 1
-function d(x /* t:string */) /* t:string */ {       // 2
-  function e(y /* t:string */) /* t:string */ {     // 3
-    function f(z /* t:string */) /* t:number */ {   // 4
-      return y + x + z;                             // 5
-    }                                               // 6
-                                                    // 7
-    return f(y);                                    // 8
-  }                                                 // 9
-                                                    // 10
-  return e(x);                                      // 11
+      const errors = typeChecker(`
+function d(x /* t:string */) /* t:string */ {
+  function e(y /* t:string */) /* t:string */ {
+    function f(z /* t:string */) /* t:number */ {
+      return y + x + z;
+    }
+
+    return f(y);
+  }
+
+  return e(x);
 }`);
 
       expect(errors).to.exist;

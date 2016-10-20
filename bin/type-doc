@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 'use strict';
 
-const loader = require('../dist/loader').fileLoader;
-const results = loader(process.argv[2]);
-console.log(results.toString());
+const typeChecker = require('../dist/main').main;
+const results = typeChecker(process.argv[2]);
+
+results.forEach((result) => {
+  console.log(result.toString({ colors: true }));
+});

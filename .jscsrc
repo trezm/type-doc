@@ -1,0 +1,7 @@
+{
+	"preset": "google",
+	"maximumLineLength": null,
+	"requireSpaceAfterKeywords": null,
+	"disallowSpacesInsideObjectBrackets": null,
+	"validateParameterSeparator": null
+}

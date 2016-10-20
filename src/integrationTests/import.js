@@ -1,6 +1,6 @@
 import { sandbox as s, stub } from 'sinon';
 import { expect } from 'chai';
-import { loader } from '../loader/file';
+import { typeChecker } from '../typeChecker';
 import * as fs from '../loader/file/fsWrapper';
 
 describe('import', () => {
@@ -18,13 +18,13 @@ describe('import', () => {
     const readFileSyncStub = sandbox.stub(fs, 'readFileSync', (file) => {
       return {
         './test': `var n = 2;`,
-        'main': `
+        './main': `
 import { test } from './test';
 `
       }[file];
     });
 
-    const errors = loader('main').errors;
+    const errors = typeChecker('./main');
 
     expect(errors.length).to.equal(0);
   });
@@ -33,7 +33,7 @@ import { test } from './test';
     const readFileSyncStub = sandbox.stub(fs, 'readFileSync', (file) => {
       return {
         './test': `export const test /* t:number */ = 2;`,
-        'main': `
+        './main': `
 import { test } from './test';
 
 var s /* t:string */ = test
@@ -41,7 +41,7 @@ var s /* t:string */ = test
       }[file];
     });
 
-    const errors = loader('main').errors;
+    const errors = typeChecker('./main');
 
     expect(errors[0].extras.expectedType).to.equal('string');
     expect(errors[0].extras.actualType).to.equal('number');
@@ -54,7 +54,7 @@ var s /* t:string */ = test
 let aNumber /* t:number */ = 3;
 export const test /* t:string */ = aNumber;
 `,
-        'main': `
+        './main': `
 import { test } from './test';
 
 var s /* t:string */ = test
@@ -62,7 +62,7 @@ var s /* t:string */ = test
       }[file];
     });
 
-    const errors = loader('main').importedFiles[0].errors;
+    const errors = typeChecker('./main');
 
     expect(errors[0].extras.expectedType).to.equal('string');
     expect(errors[0].extras.actualType).to.equal('number');
@@ -76,13 +76,13 @@ let aNumber /* t:number */ = 3;
 export const test1 /* t:string */ = aNumber;
 export const test2 /* t:string */ = aNumber;
 `,
-        'main': `
+        './main': `
 import { test1, test2 } from './test';
 `
       }[file];
     });
 
-    const errors = loader('main').importedFiles[0].errors;
+    const errors = typeChecker('./main');
 
     expect(errors[0].extras.expectedType).to.equal('string');
     expect(errors[0].extras.actualType).to.equal('number');
@@ -97,7 +97,7 @@ import { test1, test2 } from './test';
 export const test1 /* t:string */ = 'asdf';
 export const test2 /* t:number */ = 1;
 `,
-        'main': `
+        './main': `
 import { test1, test2 } from './test';
 
 const thing1 /* t:number */ = test1;
@@ -106,7 +106,7 @@ const thing2 /* t:string */ = test2;
       }[file];
     });
 
-    const errors = loader('main').errors;
+    const errors = typeChecker('./main');
 
     expect(errors[0].extras.actualType).to.equal('string');
     expect(errors[0].extras.expectedType).to.equal('number');
@@ -120,7 +120,7 @@ const thing2 /* t:string */ = test2;
         './test': `
 export const test1 /* t:string */ = 'asdf';
 `,
-        'main': `
+        './main': `
 import { test1 as test2 } from './test';
 
 const thing1 /* t:number */ = test2;
@@ -128,7 +128,7 @@ const thing1 /* t:number */ = test2;
       }[file];
     });
 
-    const errors = loader('main').errors;
+    const errors = typeChecker('./main');
 
     expect(errors[0].extras.actualType).to.equal('string');
     expect(errors[0].extras.expectedType).to.equal('number');

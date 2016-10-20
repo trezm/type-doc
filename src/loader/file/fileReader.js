@@ -1,5 +1,5 @@
 import { readFileSync } from './fsWrapper';
-import { parser } from '../../parser'
+import { parser } from '../../parser';
 import { typeChecker } from '../../typeChecker';
 import { File } from './file';
 

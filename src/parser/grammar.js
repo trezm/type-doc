@@ -1,9 +1,9 @@
 import { Parser } from 'jison';
 
 export const grammar = {
-  "lex": {
+  'lex': {
     rules: [
-      ["\\s+", "/* skip whitespace */"],
+      ['\\s+', '/* skip whitespace */'],
       ['\\//[^\\n]*', '/* skip newline comments */'],
       ['var|let|const', 'return "DECLARATION";'],
       ['as', 'return "AS";'],
@@ -34,7 +34,7 @@ export const grammar = {
     ]
   },
 
-  "bnf": {
+  'bnf': {
     start: [
       ['statementList', 'return $$ = $1']
     ],
