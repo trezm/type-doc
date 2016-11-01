@@ -5,7 +5,7 @@ export class File {
     this.fileName = fileName;
     this.ast = ast;
     this.errors = errors;
-    this.importedFiles = importedFiles
+    this.importedFiles = importedFiles;
   }
 
   toString() /* t:string */ {

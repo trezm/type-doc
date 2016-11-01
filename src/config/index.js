@@ -7,11 +7,11 @@ import { config as test } from './test';
 let _config = development;
 
 if (process.env.NODE_ENV === 'prod') {
-  _config = production
+  _config = production;
 }
 
 if (process.env.NODE_ENV === 'test') {
-  _config = development
+  _config = development;
 }
 
 export const config = _config;

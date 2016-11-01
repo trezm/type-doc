@@ -1,3 +1,7 @@
+'use strict';
+
+import chalk from 'chalk';
+
 export class TypeDocError {
   constructor(message /* t:string */, extras /* t:any */) {
     this.name = 'Generic Error';
@@ -6,6 +10,6 @@ export class TypeDocError {
   }
 
   toString() {
-    return '[' + this.name + '] ' + this.message + (this.extras ? '\n' + JSON.stringify(this.extras, null, 2) : '');
+    return `${chalk.red('[' + this.name + ']')} ${chalk.magenta(this.message)} ${chalk.gray(this.extras ? '\n' + JSON.stringify(this.extras, null, 2) : '')}`;
   }
 }
