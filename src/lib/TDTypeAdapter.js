@@ -50,7 +50,10 @@ export class TDTypeAdapter {
   _assignTypeForExportDeclaration(ast, typeDef) {
     const foundStatement = ast
       .filter((statement) => statement.type === 'ExportNamedDeclaration')
-      .map((exportNamedDeclaration) => exportNamedDeclaration.declaration.declarations)
+      .map((exportNamedDeclaration) => {
+        return exportNamedDeclaration.declaration.declarations ||
+          exportNamedDeclaration.declaration;
+      })
       .reduce((a, b) => a.concat(b), [])
       .find((variableDeclarator) => this._positionEqual(variableDeclarator.id.loc.end, typeDef.loc.start, { adjacent: true }));
 

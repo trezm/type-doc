@@ -1,26 +1,27 @@
 'use strict';
 
+import { resolve } from 'path';
 import { TDASTGenerator } from './TDASTGenerator';
 import { TDTypeAdapter } from './TDTypeAdapter';
 import { TypeMismatchError } from '../errors';
 
 export class TDTypeChecker {
-  constructor(entryPoint, ast) {
-    this._entryPoint = entryPoint;
+  constructor(file, ast) {
+    this._file = file;
     this._ast = ast;
   }
 
   run() {
-    let ast = this._ast;
     let tdTypeAdapter;
 
-    if (!ast) {
-      const tdAstGenerator = new TDASTGenerator(this._entryPoint);
+    if (!this._ast) {
+      const tdAstGenerator = new TDASTGenerator(this._file);
 
-      ast = tdAstGenerator.ast;
+      this._ast = tdAstGenerator.ast;
+      this._ast.file = resolve(this._file);
     }
 
-    tdTypeAdapter = new TDTypeAdapter(ast);
+    tdTypeAdapter = new TDTypeAdapter(this._ast);
 
     return this._checkTypes(tdTypeAdapter.ast);
   }
@@ -36,6 +37,7 @@ export class TDTypeChecker {
       errors = errors.concat(this._checkParents(body, ast));
 
       errors = errors.concat(this._checkImports(body, ast));
+      errors = errors.concat(this._checkMethods(body, ast));
       errors = errors.concat(this._checkDeclarations(body, ast));
       errors = errors.concat(this._checkAssignments(body, ast));
       errors = errors.concat(this._checkReturns(body, ast));
@@ -75,26 +77,50 @@ export class TDTypeChecker {
       .reduce((a, b) => a.concat(b), []);
   }
 
+  _checkMethods(statements, ast) {
+    return statements.filter((statement) => statement.type === 'MethodDefinition')
+      .map((methodDefinition) => methodDefinition.value)
+      .map((functionExpression) => {
+        functionExpression.body.parent = this._ast;
+        functionExpression.body.comments = this._ast.comments;
+        functionExpression.body.file = this._ast.file;
+        let childTypeChecker = new TDTypeChecker(null, functionExpression.body);
+
+        return childTypeChecker.run();
+      })
+      .reduce((a, b) => a.concat(b), []);
+  }
+
   _checkDeclarations(statements, ast) {
     return statements.filter((statement) => {
         return statement.type === 'VariableDeclaration' ||
           statement.type === 'ExportNamedDeclaration';
       })
       .map((declaration) => {
-        if (declaration.type === 'ExportNamedDeclaration') {
-          return declaration.declaration;
-        } else {
-          return declaration;
-        }
+        return (declaration.declaration && declaration.declaration.declarations) ||
+          declaration.declarations ||
+          declaration.declaration;
       })
-      .map((variableDeclaration) => variableDeclaration.declarations)
       .reduce((a, b) => a.concat(b), [])
       .map((variableDeclarator) => {
         const declaratorType = variableDeclarator.id.tdType;
         const assignmentType = this._findTypeForNode(variableDeclarator.init, statements, null /* parent */, ast);
+        let errors = [];
 
-        return this._testTypes(declaratorType, assignmentType, variableDeclarator.loc.start.line);
+        // If the variable declarator has a body, recursively check that.
+        if (variableDeclarator.body) {
+          variableDeclarator.body.parent = this._ast;
+          variableDeclarator.body.comments = this._ast.comments;
+          variableDeclarator.body.file = this._ast.file;
+          let childTypeChecker = new TDTypeChecker(null, variableDeclarator.body);
+
+          errors = errors.concat(childTypeChecker.run());
+        }
+
+        errors = errors.concat([this._testTypes(declaratorType, assignmentType, variableDeclarator.loc.start.line)]);
+        return errors;
       })
+      .reduce((a, b) => a.concat(b), [])
       .filter((errors) => Boolean(errors));
   }
 
@@ -133,12 +159,13 @@ export class TDTypeChecker {
   }
 
   _testTypes(expectedType, actualType, lineNumber) {
-    if (typeof expectedType !== 'undefined' &&
-        typeof actualType !== 'undefined' &&
+    if (Boolean(expectedType) &&
+        Boolean(actualType) &&
         expectedType !== actualType) {
       return new TypeMismatchError(`Type mismatch in declaration on line ${lineNumber}`, {
+        actualType: actualType,
         expectedType: expectedType,
-        actualType: actualType
+        file: this._ast.file
       });
     }
 
@@ -229,13 +256,21 @@ export class TDTypeChecker {
 
         return;
       case 'BinaryExpression':
-        debugger;
         return this._findTypeForExpression(node, statements, parent, ast);
       case 'NewExpression':
         return node.callee.name;
       case 'CallExpression':
+        if (node && node.callee && node.callee.name === 'require') {
+          return 'any';
+        }
+
         assignedDeclarator = this._findFunctionDeclaratorFromIdentifier(node.callee, statements, parent);
-        return assignedDeclarator.tdType;
+
+        if (assignedDeclarator) {
+          return assignedDeclarator.tdType;
+        }
+
+        return;
       default:
         return;
     }

@@ -1,5 +1,6 @@
 'use strict';
 
+import { isAbsolute, resolve } from 'path';
 import { parse } from 'esprima';
 import { readFileSync } from '../loader/file/fsWrapper';
 
@@ -10,7 +11,7 @@ export const DEFAULT_OPTIONS = {
 };
 
 export class TDASTGenerator {
-  constructor(entryFile, options=DEFAULT_OPTIONS) {
+  constructor(entryFile /* t:string */, options=DEFAULT_OPTIONS) {
     this._entryFile = entryFile;
 
     try {
@@ -28,21 +29,32 @@ export class TDASTGenerator {
    * returned ast.
    */
   get ast() /* t:Object */ {
-    const rootAst = parse(this._entryFileContents, this._options);
+    let rootAst /* t:Object */;
 
-    const imports = this._findImports(rootAst);
-    const importAsts = this._generateImportAsts(imports);
+    try {
+      rootAst = parse(this._entryFileContents, this._options);
 
-    rootAst.imports = importAsts;
+      const imports /* t:[Object] */ = this._findImports(rootAst);
+      const importAsts /* t:[Object] */ = this._generateImportAsts(imports);
+
+      rootAst.imports = importAsts;
+      rootAst.file = resolve(this._entryFile);
+    } catch (e) {
+      // For now, eat the errors, it's probably an external module.
+      rootAst = {
+        body: [],
+        comments: []
+      };
+    }
 
     return rootAst;
   }
 
-  _findImports(ast) {
+  _findImports(ast) /* t:[Object] */ {
     return ast.body.filter((node) => node.type === 'ImportDeclaration');
   }
 
-  _generateImportAsts(importList) {
+  _generateImportAsts(importList /* t:[Object] */) /* t:[Object] */ {
     const pathArray = this._entryFile.split('/');
     pathArray.pop();
 

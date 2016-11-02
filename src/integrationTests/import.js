@@ -133,4 +133,22 @@ const thing1 /* t:number */ = test2;
     expect(errors[0].extras.actualType).to.equal('string');
     expect(errors[0].extras.expectedType).to.equal('number');
   });
+
+  it('should handle class exports', () => {
+    const readFileSyncStub = sandbox.stub(fs, 'readFileSync', (file) => {
+      return {
+        './test': `
+export class Test {
+  constructor() {}
+}`,
+        './main': `
+import { Test } from './test';
+`
+      }[file];
+    });
+
+    const errors = typeChecker('./main');
+
+    expect(errors.length).to.equal(0);
+  });
 });
