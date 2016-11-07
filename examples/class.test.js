@@ -1,7 +1,7 @@
-export class TestClass {
-  constructor() {
-    const s /* t:string */ = 1;
+class TestClass {
+  constructor() {}
+
+  aBadMethod(s /* t:string */) /* t:number */ {
+    return s;
   }
 }
-
-const i /* t:number */ = new TestClass();
