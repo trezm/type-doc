@@ -53,7 +53,8 @@ export class TDASTGenerator {
         return {
           astGenerator: astGenerator,
           ast: astGenerator.ast,
-          specifiers: _import.specifiers
+          specifiers: _import.specifiers,
+          source: _import.source
         };
       });
 

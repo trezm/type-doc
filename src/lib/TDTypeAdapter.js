@@ -1,5 +1,8 @@
 'use strict';
 
+import { TDDeclaration } from './TDDeclaration';
+import { TDScope } from './TDScope';
+
 const TYPEDEF_REGEX = /^\s*t:([^\s]+)\s*$/;
 
 export class TDTypeAdapter {
@@ -13,20 +16,22 @@ export class TDTypeAdapter {
     return this._ast;
   }
 
-  _assignDeclarationTypes(ast) {
+  _assignDeclarationTypes(ast, parentScope) {
     let body = ast && ast.body;
     body = body.body || body;
 
     if (body) {
+      const scope = new TDScope(parentScope);
+
       body.filter((statement) => Boolean(statement.body))
-        .forEach((statement) => this._assignDeclarationTypes(statement));
+        .forEach((statement) => this._assignDeclarationTypes(statement, scope));
 
       this._typeDefs
         .forEach((typeDefComment) => {
-          this._assignTypeForDeclaration(body, typeDefComment);
-          this._assignTypeForExportDeclaration(body, typeDefComment);
-          this._assignTypeForParameter(body, typeDefComment);
-          this._assignTypeForFunction(body, typeDefComment);
+          this._assignTypeForDeclaration(body, typeDefComment, scope);
+          this._assignTypeForExportDeclaration(body, typeDefComment, scope);
+          this._assignTypeForParameter(body, typeDefComment, scope);
+          this._assignTypeForFunction(body, typeDefComment, scope);
         });
     }
   }
@@ -88,6 +93,7 @@ export class TDTypeAdapter {
         if (typeDefIsAfterParams &&
             typeDefIsBeforeBody) {
           functionDeclaration.tdType = typeDef.value.match(TYPEDEF_REGEX)[1];
+          functionDeclaration.id.tdType = typeDef.value.match(TYPEDEF_REGEX)[1];
         }
 
         return false;

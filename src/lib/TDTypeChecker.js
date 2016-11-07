@@ -1,6 +1,7 @@
 'use strict';
 
 import { TDASTGenerator } from './TDASTGenerator';
+import { TDScopeGenerator } from './TDScopeGenerator';
 import { TDTypeAdapter } from './TDTypeAdapter';
 import { TypeMismatchError } from '../errors';
 
@@ -13,6 +14,7 @@ export class TDTypeChecker {
   run() {
     let ast = this._ast;
     let tdTypeAdapter;
+    let scope;
 
     if (!ast) {
       const tdAstGenerator = new TDASTGenerator(this._entryPoint);
@@ -21,21 +23,23 @@ export class TDTypeChecker {
     }
 
     tdTypeAdapter = new TDTypeAdapter(ast);
+    ast = tdTypeAdapter.ast;
 
-    return this._checkTypes(tdTypeAdapter.ast);
+    return this._checkTypes(ast);
   }
 
-  _checkTypes(ast) {
+  _checkTypes(ast, parentScope) {
     let body = ast && ast.body;
     body = body.body || body;
 
     if (body) {
       let errors = [];
-
-      // Assign parents
-      errors = errors.concat(this._checkParents(body, ast));
+      let scope;
 
       errors = errors.concat(this._checkImports(body, ast));
+      scope = TDScopeGenerator.generate(ast, parentScope);
+
+      errors = errors.concat(this._checkChildScopes(body, ast));
       errors = errors.concat(this._checkDeclarations(body, ast));
       errors = errors.concat(this._checkAssignments(body, ast));
       errors = errors.concat(this._checkReturns(body, ast));
@@ -44,27 +48,9 @@ export class TDTypeChecker {
     }
   }
 
-  _checkParents(statements, parent) {
+  _checkChildScopes(statements, parent) {
     return statements.filter((statement) => Boolean(statement.body))
-      .map((statement) => {
-        statement.parent = parent;
-
-        // Prepend identifiers to a body
-        if (statement.type === 'FunctionDeclaration') {
-          statement.body.body.push({
-            type: 'VariableDeclaration',
-            declarations: statement.params.map((param) => {
-              return {
-                id: param,
-                loc: statement.loc
-              };
-            })
-          });
-        }
-
-        this._checkParents(statement.body.body || statement.body, statements);
-        return this._checkTypes(statement);
-      })
+      .map((statement) => this._checkTypes(statement, statement.scope))
       .reduce((a, b) => a.concat(b), []);
   }
 
@@ -82,16 +68,24 @@ export class TDTypeChecker {
       })
       .map((declaration) => {
         if (declaration.type === 'ExportNamedDeclaration') {
+          declaration.declaration.scope = declaration.scope;
           return declaration.declaration;
         } else {
           return declaration;
         }
       })
-      .map((variableDeclaration) => variableDeclaration.declarations)
+      .map((variableDeclaration) => {
+        variableDeclaration.declarations.forEach((declaration) => declaration.scope = variableDeclaration.scope);
+        return variableDeclaration.declarations;
+      })
       .reduce((a, b) => a.concat(b), [])
+      .filter((variableDeclarator) => Boolean(variableDeclarator.init))
       .map((variableDeclarator) => {
-        const declaratorType = variableDeclarator.id.tdType;
-        const assignmentType = this._findTypeForNode(variableDeclarator.init, statements, null /* parent */, ast);
+        variableDeclarator.id.scope = variableDeclarator.scope;
+        variableDeclarator.init.scope = variableDeclarator.scope;
+
+        const declaratorType = this._findTypeForNode(variableDeclarator.id);
+        const assignmentType = this._findTypeForNode(variableDeclarator.init);
 
         return this._testTypes(declaratorType, assignmentType, variableDeclarator.loc.start.line);
       })
@@ -103,10 +97,16 @@ export class TDTypeChecker {
         return statement.type === 'ExpressionStatement' &&
           statement.expression.type === 'AssignmentExpression';
       })
-      .map((expressionStatement) => expressionStatement.expression)
+      .map((expressionStatement) => {
+        expressionStatement.expression.scope = expressionStatement.scope;
+        return expressionStatement.expression;
+      })
       .map((assignmentExpression) => {
-        const declaratorType = this._findTypeForNode(assignmentExpression.left, statements);
-        const assignmentType = this._findTypeForNode(assignmentExpression.right, statements);
+        assignmentExpression.left.scope = assignmentExpression.scope;
+        assignmentExpression.right.scope = assignmentExpression.scope;
+
+        const declaratorType = this._findTypeForNode(assignmentExpression.left);
+        const assignmentType = this._findTypeForNode(assignmentExpression.right);
 
         return this._testTypes(declaratorType, assignmentType, assignmentExpression.loc.start.line);
       })
@@ -120,10 +120,7 @@ export class TDTypeChecker {
         return functionDeclaration.body.body
           .filter((statement) => statement.type === 'ReturnStatement')
           .map((returnStatement) => {
-            const returnType = this._findTypeForNode(
-              returnStatement.argument,
-              functionDeclaration.body.body,
-              functionDeclaration.parent);
+            const returnType = this._findTypeForNode(returnStatement);
 
             return this._testTypes(functionDeclaration.tdType, returnType, returnStatement.loc.start.line);
           });
@@ -133,8 +130,13 @@ export class TDTypeChecker {
   }
 
   _testTypes(expectedType, actualType, lineNumber) {
-    if (typeof expectedType !== 'undefined' &&
-        typeof actualType !== 'undefined' &&
+    const checkExpectedType = typeof expectedType !== 'undefined' &&
+      expectedType !== 'any';
+    const checkActualType = typeof actualType !== 'undefined' &&
+      actualType !== 'any';
+
+    if (checkExpectedType &&
+        checkActualType &&
         expectedType !== actualType) {
       return new TypeMismatchError(`Type mismatch in declaration on line ${lineNumber}`, {
         expectedType: expectedType,
@@ -193,8 +195,6 @@ export class TDTypeChecker {
       .map((importSpecifier) => {
         const wrappedImport = ast.imports.find((wrappedImport) => wrappedImport.specifiers.indexOf(importSpecifier) > -1);
 
-        this._findTypeForImport(importSpecifier, statements, parent, ast);
-
         importSpecifier.id = importSpecifier.local;
         return importSpecifier;
 
@@ -205,8 +205,8 @@ export class TDTypeChecker {
     return importDeclarator;
   }
 
-  _findTypeForNode(node, statements, parent, ast) {
-    let assignedDeclarator;
+  _findTypeForNode(node) {
+    let tdDeclaration;
 
     if (!node) {
       return;
@@ -216,47 +216,26 @@ export class TDTypeChecker {
       case 'Literal':
         return typeof node.value;
       case 'Identifier':
-        assignedDeclarator = this._findDeclaratorFromIdentifier(node, statements, parent, ast);
-        if (assignedDeclarator) {
-          return (assignedDeclarator.id && assignedDeclarator.id.tdType) ||
-            (assignedDeclarator.init && typeof assignedDeclarator.init.value);
-        }
-
-        assignedDeclarator = this._findImportFromIdentifier(node, statements, parent, ast);
-        if (assignedDeclarator) {
-          return this._findTypeForImport(assignedDeclarator, statements, parent, ast);
-        }
-
-        return;
+        tdDeclaration = node.scope.findDeclarationForName(node.name);
+        return tdDeclaration && tdDeclaration.type || 'any';
       case 'BinaryExpression':
-        debugger;
-        return this._findTypeForExpression(node, statements, parent, ast);
+        node.left.scope = node.scope;
+        node.right.scope = node.scope;
+        return this._findTypeForExpression(node);
       case 'NewExpression':
         return node.callee.name;
       case 'CallExpression':
-        assignedDeclarator = this._findFunctionDeclaratorFromIdentifier(node.callee, statements, parent);
-        return assignedDeclarator.tdType;
+        tdDeclaration = node.scope.findDeclarationForName(node.callee.name);
+        return tdDeclaration && tdDeclaration.type || 'any';
+      case 'ReturnStatement':
+        node.argument.scope = node.scope;
+        return this._findTypeForNode(node.argument);
       default:
         return;
     }
   }
 
-  _findTypeForExpression(expression, statements, parent, ast) {
-    return this._findTypeForNode(expression.left, statements, parent, ast);
-  }
-
-  _findTypeForImport(importSpecifier, statements, parent, ast) {
-    return ast.imports
-      .map((_import) => _import.ast)
-      .map((importedAst) => {
-        const correspondingExport = importedAst.body
-          .filter((statement) => statement.type === 'ExportNamedDeclaration')
-          .map((exportNamedDeclaration) => exportNamedDeclaration.declaration.declarations)
-          .reduce((a, b) => a.concat(b), [])
-          .find((variableDeclarator) => variableDeclarator.id.name === importSpecifier.imported.name);
-
-        return this._findTypeForNode(correspondingExport.id, importedAst.body, null, importedAst);
-      })
-      .find((type) => Boolean(type));
+  _findTypeForExpression(expression) {
+    return this._findTypeForNode(expression.left);
   }
 }
