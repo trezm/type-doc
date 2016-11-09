@@ -1,5 +1,8 @@
 'use strict';
 
+import { TDDeclaration } from './TDDeclaration';
+import { TDScope } from './TDScope';
+
 const TYPEDEF_REGEX = /^\s*t:([^\s]+)\s*$/;
 
 export class TDTypeAdapter {
@@ -13,20 +16,23 @@ export class TDTypeAdapter {
     return this._ast;
   }
 
-  _assignDeclarationTypes(ast) {
+  _assignDeclarationTypes(ast, parentScope) {
     let body = ast && ast.body;
     body = body.body || body;
 
     if (body) {
+      const scope = new TDScope(parentScope);
+
       body.filter((statement) => Boolean(statement.body))
-        .forEach((statement) => this._assignDeclarationTypes(statement));
+        .forEach((statement) => this._assignDeclarationTypes(statement, scope));
 
       this._typeDefs
         .forEach((typeDefComment) => {
-          this._assignTypeForDeclaration(body, typeDefComment);
-          this._assignTypeForExportDeclaration(body, typeDefComment);
-          this._assignTypeForParameter(body, typeDefComment);
-          this._assignTypeForFunction(body, typeDefComment);
+          this._assignTypeForDeclaration(body, typeDefComment, scope);
+          this._assignTypeForExportDeclaration(body, typeDefComment, scope);
+          this._assignTypeForParameter(body, typeDefComment, scope);
+          this._assignTypeForFunction(body, typeDefComment, scope);
+          this._assginTypeForClassMethods(body, typeDefComment, scope);
         });
     }
   }
@@ -50,10 +56,7 @@ export class TDTypeAdapter {
   _assignTypeForExportDeclaration(ast, typeDef) {
     const foundStatement = ast
       .filter((statement) => statement.type === 'ExportNamedDeclaration')
-      .map((exportNamedDeclaration) => {
-        return exportNamedDeclaration.declaration.declarations ||
-          exportNamedDeclaration.declaration;
-      })
+      .map((exportNamedDeclaration) => exportNamedDeclaration.declaration.declarations || exportNamedDeclaration.declaration)
       .reduce((a, b) => a.concat(b), [])
       .find((variableDeclarator) => this._positionEqual(variableDeclarator.id.loc.end, typeDef.loc.start, { adjacent: true }));
 
@@ -64,7 +67,11 @@ export class TDTypeAdapter {
 
   _assignTypeForParameter(ast, typeDef) {
     const foundParam = ast
-      .filter((statement) => statement.type === 'FunctionDeclaration')
+      .filter((statement) => {
+        return statement.type === 'FunctionDeclaration' ||
+          statement.type === 'MethodDefinition';
+      })
+      .map((declaration) => declaration.value || declaration)
       .map((functionDeclaration) => functionDeclaration.params)
       .reduce((a, b) => a.concat(b), [])
       .find((paramIdentifier) => this._positionEqual(paramIdentifier.loc.end, typeDef.loc.start, { adjacent: true }));
@@ -74,10 +81,34 @@ export class TDTypeAdapter {
     }
   }
 
+  _assginTypeForClassMethods(ast, typeDef) {
+    const foundMethod = ast
+      .filter((statement) => statement.type === 'MethodDefinition')
+      .forEach((methodDefinition) => {
+        const functionExpression = methodDefinition.value;
+        const lastParam = functionExpression.params[functionExpression.params.length - 1];
+        const lastParamTypeString = lastParam && lastParam.tdType || '';
+        const lastParamLoc = (lastParam && lastParam.loc) ||
+          (methodDefinition.key && methodDefinition.key.loc);
+        const typeDefIsAfterParams = (typeDef.loc.start.row > lastParamLoc.end.row) ||
+          ((typeDef.loc.start.row === lastParamLoc.end.row) &&
+           (typeDef.loc.start.column > lastParamLoc.end.column + lastParamTypeString.length));
+        const typeDefIsBeforeBody = (typeDef.loc.end.row < functionExpression.body.loc.start.row) ||
+          ((typeDef.loc.end.row === functionExpression.body.loc.start.row) &&
+           (typeDef.loc.end.column < functionExpression.body.loc.start.column));
+
+        if (typeDefIsAfterParams &&
+            typeDefIsBeforeBody) {
+          methodDefinition.tdType = typeDef.value.match(TYPEDEF_REGEX)[1];
+          methodDefinition.key.tdType = typeDef.value.match(TYPEDEF_REGEX)[1];
+        }
+      });
+  }
+
   _assignTypeForFunction(ast, typeDef) {
     const foundFunction = ast
       .filter((statement) => statement.type === 'FunctionDeclaration')
-      .find((functionDeclaration) => {
+      .forEach((functionDeclaration) => {
         const lastParam = functionDeclaration.params[functionDeclaration.params.length - 1];
         const lastParamTypeString = lastParam && lastParam.tdType || '';
         const lastParamLoc = lastParam && lastParam.loc || functionDeclaration.id.loc;
@@ -91,14 +122,9 @@ export class TDTypeAdapter {
         if (typeDefIsAfterParams &&
             typeDefIsBeforeBody) {
           functionDeclaration.tdType = typeDef.value.match(TYPEDEF_REGEX)[1];
+          functionDeclaration.id.tdType = typeDef.value.match(TYPEDEF_REGEX)[1];
         }
-
-        return false;
       });
-
-    if (foundFunction) {
-      foundParam.tdType = typeDef.value.match(TYPEDEF_REGEX)[1];
-    }
   }
 
   _findTypeDefComments(ast) {
