@@ -46,14 +46,15 @@ export class TDTypeChecker {
       errors = errors.concat(this._checkDeclarations(body, ast));
       errors = errors.concat(this._checkAssignments(body, ast));
       errors = errors.concat(this._checkReturns(body, ast));
+      errors = errors.concat(this._checkCalls(body, ast));
 
       return errors;
     }
   }
 
   _checkChildScopes(statements, parent) {
-    return statements.filter((statement) => Boolean(statement.body))
-      .map((statement) => this._checkTypes(statement, statement.scope))
+    return statements.filter((statement) => Boolean(statement.body || (statement.value && statement.value.body)))
+      .map((statement) => this._checkTypes(statement && statement.value || statement, statement.scope))
       .reduce((a, b) => a.concat(b), []);
   }
 
@@ -132,6 +133,28 @@ export class TDTypeChecker {
 
             return this._testTypes(declaration.tdType, returnType, returnStatement.loc.start.line);
           });
+      })
+      .reduce((a, b) => a.concat(b), [])
+      .filter((errors) => Boolean(errors));
+  }
+
+  _checkCalls(statements) {
+    return statements
+      .filter((statement) => {
+        return statement.type === 'ExpressionStatement' &&
+          statement.expression.type === 'CallExpression';
+      })
+      .map((callExpression) => {
+        const functionDeclaration = callExpression.scope.findDeclarationForName(callExpression.expression.callee.name);
+
+        return functionDeclaration && callExpression.expression.arguments.map((argument, index) => {
+          const argumentDeclaration = callExpression.scope.findDeclarationForName(argument.name);
+          const argumentDeclarationType = argumentDeclaration && argumentDeclaration.type;
+          const param = functionDeclaration.params[index];
+          const paramType = param.type;
+
+          return this._testTypes(paramType, argumentDeclarationType, callExpression.loc.start.line);
+        });
       })
       .reduce((a, b) => a.concat(b), [])
       .filter((errors) => Boolean(errors));
@@ -234,7 +257,12 @@ export class TDTypeChecker {
       case 'NewExpression':
         return node.callee.name;
       case 'CallExpression':
-        tdDeclaration = node.scope.findDeclarationForName(node.callee.name);
+        if (node.callee.type === 'MemberExpression') {
+          tdDeclaration = node.scope.findDeclarationForStaticMember(node.callee);
+        } else {
+          tdDeclaration = node.scope.findDeclarationForName(node.callee.name);
+        }
+
         return tdDeclaration && tdDeclaration.type || 'any';
       case 'ReturnStatement':
         node.argument.scope = node.scope;

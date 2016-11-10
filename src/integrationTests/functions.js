@@ -63,6 +63,24 @@ function subtractTwo(x /* t:number */) /* t:string */ {
       expect(errors[0].extras.expectedType).to.equal('string');
       expect(errors[0].extras.actualType).to.equal('number');
     });
+
+    it('should check the argument types', () => {
+      const errors = typeChecker(`
+const s /* t:string */ = 'some string';
+const n /* t:number */ = 1;
+
+function subtract(x /* t:number */, y /* t:number */) /* t:number */ {
+  return x - y;
+}
+
+subtract(n, s);
+`);
+
+      expect(errors).to.exist;
+      expect(errors.length).to.equal(1);
+      expect(errors[0].extras.expectedType).to.equal('number');
+      expect(errors[0].extras.actualType).to.equal('string');
+    });
   });
 
   describe('functions in functions should still respect types', () => {

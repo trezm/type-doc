@@ -4,11 +4,15 @@ import { TDDeclaration } from './TDDeclaration';
 import { TDScope } from './TDScope';
 
 const TYPEDEF_REGEX = /^\s*t:([^\s]+)\s*$/;
+const JSDOC_PARAMS_REGEX = /@param\s*\{[^\}]+\}\s*[^\s]+/g;
+const JSDOC_SINGLE_PARAM_REGEX = /@param\s*\{([^\}]+)\}\s*([^\s]+)/;
+const JSDOC_RETURNS_REGEX = /@returns\s*\{([^\}]+)\}/;
 
 export class TDTypeAdapter {
   constructor(ast) {
     this._ast = ast;
     this._typeDefs = this._findTypeDefComments(this._ast);
+    this._jsDocDefs = this._findJSDocDefComments(this._ast);
   }
 
   get ast() {
@@ -17,22 +21,28 @@ export class TDTypeAdapter {
   }
 
   _assignDeclarationTypes(ast, parentScope) {
-    let body = ast && ast.body;
+    let body = (ast && ast.body) || (ast && ast.value && ast.value.body);
     body = body.body || body;
 
     if (body) {
       const scope = new TDScope(parentScope);
 
-      body.filter((statement) => Boolean(statement.body))
+      body.filter((statement) => Boolean(statement.body || (statement.value && statement.value.body)))
         .forEach((statement) => this._assignDeclarationTypes(statement, scope));
 
       this._typeDefs
         .forEach((typeDefComment) => {
-          this._assignTypeForDeclaration(body, typeDefComment, scope);
-          this._assignTypeForExportDeclaration(body, typeDefComment, scope);
-          this._assignTypeForParameter(body, typeDefComment, scope);
-          this._assignTypeForFunction(body, typeDefComment, scope);
-          this._assginTypeForClassMethods(body, typeDefComment, scope);
+          this._assignTypeForDeclarationFromTypeDef(body, typeDefComment, scope);
+          this._assignTypeForExportDeclarationFromTypeDef(body, typeDefComment, scope);
+          this._assignTypeForParameterFromTypeDef(body, typeDefComment, scope);
+          this._assignTypeForFunctionFromTypeDef(body, typeDefComment, scope);
+          this._assginTypeForClassMethodsFromTypeDef(body, typeDefComment, scope);
+        });
+
+      this._jsDocDefs
+        .forEach((jsDocComment) => {
+          this._assignTypeForFunctionFromJSDoc(body, jsDocComment, scope);
+          this._assignTypeForClassMethodsFromJSDoc(body, jsDocComment, scope);
         });
     }
   }
@@ -41,7 +51,7 @@ export class TDTypeAdapter {
    * Note that this is not a pure function and _will_ alter the values within
    * the `ast` argument.
    */
-  _assignTypeForDeclaration(ast, typeDef) {
+  _assignTypeForDeclarationFromTypeDef(ast, typeDef) {
     const foundStatement = ast
       .filter((statement) => statement.type === 'VariableDeclaration')
       .map((variableDeclaration) => variableDeclaration.declarations)
@@ -53,7 +63,7 @@ export class TDTypeAdapter {
     }
   }
 
-  _assignTypeForExportDeclaration(ast, typeDef) {
+  _assignTypeForExportDeclarationFromTypeDef(ast, typeDef) {
     const foundStatement = ast
       .filter((statement) => statement.type === 'ExportNamedDeclaration')
       .map((exportNamedDeclaration) => exportNamedDeclaration.declaration.declarations || exportNamedDeclaration.declaration)
@@ -65,7 +75,7 @@ export class TDTypeAdapter {
     }
   }
 
-  _assignTypeForParameter(ast, typeDef) {
+  _assignTypeForParameterFromTypeDef(ast, typeDef) {
     const foundParam = ast
       .filter((statement) => {
         return statement.type === 'FunctionDeclaration' ||
@@ -81,8 +91,8 @@ export class TDTypeAdapter {
     }
   }
 
-  _assginTypeForClassMethods(ast, typeDef) {
-    const foundMethod = ast
+  _assginTypeForClassMethodsFromTypeDef(ast, typeDef) {
+    ast
       .filter((statement) => statement.type === 'MethodDefinition')
       .forEach((methodDefinition) => {
         const functionExpression = methodDefinition.value;
@@ -105,8 +115,8 @@ export class TDTypeAdapter {
       });
   }
 
-  _assignTypeForFunction(ast, typeDef) {
-    const foundFunction = ast
+  _assignTypeForFunctionFromTypeDef(ast, typeDef) {
+    ast
       .filter((statement) => statement.type === 'FunctionDeclaration')
       .forEach((functionDeclaration) => {
         const lastParam = functionDeclaration.params[functionDeclaration.params.length - 1];
@@ -127,9 +137,68 @@ export class TDTypeAdapter {
       });
   }
 
+  _assignTypeForClassMethodsFromJSDoc(ast, typeDef) {
+    ast
+      .filter((statement) => statement.type === 'MethodDefinition')
+      .forEach((methodDefinition) => {
+        const functionExpression = methodDefinition.value;
+        const commentEndLine = typeDef.loc.end.line;
+        const functionStartLine = functionExpression.loc.start.line;
+
+        if (functionStartLine === commentEndLine + 1) {
+          const paramStrings = typeDef.value.match(JSDOC_PARAMS_REGEX);
+          const returns = typeDef.value.match(JSDOC_RETURNS_REGEX)[1];
+
+          paramStrings.forEach((paramString) => {
+            const paramStringMatch = paramString.match(JSDOC_SINGLE_PARAM_REGEX);
+            const param = functionExpression.params.find((functionParam) => functionParam.name === paramStringMatch[2]);
+
+            if (param) {
+              param.tdType = paramStringMatch[1];
+            } else {
+              console.log('undocumented param:', paramString);
+            }
+          });
+          functionExpression.tdType = returns;
+        }
+      });
+  }
+
+  _assignTypeForFunctionFromJSDoc(ast, typeDef) {
+    ast
+      .filter((statement) => statement.type === 'FunctionDeclaration')
+      .forEach((functionDeclaration) => {
+        const commentEndLine = typeDef.loc.end.line;
+        const functionStartLine = functionDeclaration.loc.start.line;
+
+        if (functionStartLine === commentEndLine + 1) {
+          const paramStrings = typeDef.value.match(JSDOC_PARAMS_REGEX);
+          const returns = typeDef.value.match(JSDOC_RETURNS_REGEX)[1];
+
+          paramStrings.forEach((paramString) => {
+            const paramStringMatch = paramString.match(JSDOC_SINGLE_PARAM_REGEX);
+            const param = functionDeclaration.params.find((functionParam) => functionParam.name === paramStringMatch[2]);
+
+            if (param) {
+              param.tdType = paramStringMatch[1];
+            } else {
+              console.log('undocumented param:', paramString);
+            }
+          });
+          functionDeclaration.tdType = returns;
+          functionDeclaration.id.tdType = returns;
+        }
+      });
+  }
+
   _findTypeDefComments(ast) {
     return ast.comments
       .filter((comment) => TYPEDEF_REGEX.test(comment.value));
+  }
+
+  _findJSDocDefComments(ast) {
+    return ast.comments
+      .filter((comment) => JSDOC_PARAMS_REGEX.test(comment.value) || JSDOC_RETURNS_REGEX.test(comment.value));
   }
 
   _positionEqual(pos1, pos2, options) {

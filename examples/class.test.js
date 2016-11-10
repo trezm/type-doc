@@ -1,7 +1,13 @@
+const s = () => 'hello';
+
 class TestClass {
   constructor() {}
 
-  aBadMethod(s /* t:string */) /* t:number */ {
+  aFineMethod(s /* t:string */) /* t:string */ {
     return s;
+  }
+
+  toNumber(s /* t:number */) /* t:string */ {
+    return this.aFineMethod(s);
   }
 }
