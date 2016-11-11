@@ -5,7 +5,7 @@ import { TDScope } from './TDScope';
 
 const TYPEDEF_REGEX = /^\s*t:([^\s]+)\s*$/;
 const JSDOC_PARAMS_REGEX = /@param\s*\{[^\}]+\}\s*[^\s]+/g;
-const JSDOC_SINGLE_PARAM_REGEX = /@param\s*\{([^\}]+)\}\s*\[?([^\s]+)\]?/;
+const JSDOC_SINGLE_PARAM_REGEX = /@param\s*\{([^\}]+)\}\s*\[?([^\s\]]+)\]?/;
 const JSDOC_RETURNS_REGEX = /@returns\s*\{([^\}]+)\}/;
 
 export class TDTypeAdapter {
@@ -146,6 +146,7 @@ export class TDTypeAdapter {
         const functionStartLine = functionExpression.loc.start.line;
 
         if (functionStartLine === commentEndLine + 1) {
+          debugger;
           const paramStrings = typeDef.value.match(JSDOC_PARAMS_REGEX);
           const returns = (typeDef.value.match(JSDOC_RETURNS_REGEX) || [])[1];
 
