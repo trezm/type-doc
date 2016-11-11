@@ -131,7 +131,7 @@ export class TDTypeChecker {
           .map((returnStatement) => {
             const returnType = this._findTypeForNode(returnStatement);
 
-            return this._testTypes(declaration.tdType, returnType, returnStatement.loc.start.line);
+            return this._testTypes(declaration.value && declaration.value.tdType || declaration.tdType, returnType, returnStatement.loc.start.line);
           });
       })
       .reduce((a, b) => a.concat(b), [])

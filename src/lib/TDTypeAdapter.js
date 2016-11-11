@@ -5,7 +5,7 @@ import { TDScope } from './TDScope';
 
 const TYPEDEF_REGEX = /^\s*t:([^\s]+)\s*$/;
 const JSDOC_PARAMS_REGEX = /@param\s*\{[^\}]+\}\s*[^\s]+/g;
-const JSDOC_SINGLE_PARAM_REGEX = /@param\s*\{([^\}]+)\}\s*([^\s]+)/;
+const JSDOC_SINGLE_PARAM_REGEX = /@param\s*\{([^\}]+)\}\s*\[?([^\s]+)\]?/;
 const JSDOC_RETURNS_REGEX = /@returns\s*\{([^\}]+)\}/;
 
 export class TDTypeAdapter {
@@ -147,7 +147,7 @@ export class TDTypeAdapter {
 
         if (functionStartLine === commentEndLine + 1) {
           const paramStrings = typeDef.value.match(JSDOC_PARAMS_REGEX);
-          const returns = typeDef.value.match(JSDOC_RETURNS_REGEX)[1];
+          const returns = (typeDef.value.match(JSDOC_RETURNS_REGEX) || [])[1];
 
           paramStrings.forEach((paramString) => {
             const paramStringMatch = paramString.match(JSDOC_SINGLE_PARAM_REGEX);
@@ -173,7 +173,7 @@ export class TDTypeAdapter {
 
         if (functionStartLine === commentEndLine + 1) {
           const paramStrings = typeDef.value.match(JSDOC_PARAMS_REGEX);
-          const returns = typeDef.value.match(JSDOC_RETURNS_REGEX)[1];
+          const returns = (typeDef.value.match(JSDOC_RETURNS_REGEX) || [])[1];
 
           paramStrings.forEach((paramString) => {
             const paramStringMatch = paramString.match(JSDOC_SINGLE_PARAM_REGEX);
