@@ -193,12 +193,17 @@ export class TDTypeAdapter {
 
   _findTypeDefComments(ast) {
     return ast.comments
-      .filter((comment) => TYPEDEF_REGEX.test(comment.value));
+      .filter((comment) => comment.value.match(TYPEDEF_REGEX));
   }
 
   _findJSDocDefComments(ast) {
     return ast.comments
-      .filter((comment) => JSDOC_PARAMS_REGEX.test(comment.value) || JSDOC_RETURNS_REGEX.test(comment.value));
+      .filter((comment) => {
+        const params = comment.value.match(JSDOC_PARAMS_REGEX);
+        const returns = comment.value.match(JSDOC_RETURNS_REGEX);
+
+        return params || returns;
+      });
   }
 
   _positionEqual(pos1, pos2, options) {

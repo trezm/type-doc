@@ -150,7 +150,6 @@ export class TDScopeGenerator {
               /^\.\//.test(declarator.init.arguments[0].value);
           })) {
           this._assignTypesToRequire(statement, ast);
-          debugger;
         }
 
         if (statement.type === 'ExportNamedDeclaration') {

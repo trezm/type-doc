@@ -42,6 +42,34 @@ class TestClass {
     });
   });
 
+  describe('with functions', () => {
+    it('should check the return type of the called expression', () => {
+      const errors = typeChecker(`
+var hi /* t:number */ = stringinator();
+
+function stringinator() /* t:string */ {
+  return 'asdf';
+}
+`);
+
+      expect(errors[0].extras.expectedType).to.equal('number');
+      expect(errors[0].extras.actualType).to.equal('string');
+    });
+
+    it('should check the params of the called expression', () => {
+      const errors = typeChecker(`
+var hi /* t:string */ = stringinator('1');
+
+function stringinator(n /* t:number */) /* t:string */ {
+  return '' + n;
+}
+`);
+
+      expect(errors[0].extras.expectedType).to.equal('number');
+      expect(errors[0].extras.actualType).to.equal('string');
+    });
+  });
+
   describe('with constants', () => {
     it('should check against string constants', () => {
       const errors = typeChecker(`

@@ -92,9 +92,11 @@ export class TDTypeChecker {
 
         const declaratorType = this._findTypeForNode(variableDeclarator.id);
         const assignmentType = this._findTypeForNode(variableDeclarator.init);
+        const assignmentErrors = this._checkCalls([variableDeclarator.init]);
 
-        return this._testTypes(declaratorType, assignmentType, variableDeclarator.loc.start.line);
+        return assignmentErrors.concat([this._testTypes(declaratorType, assignmentType, variableDeclarator.loc.start.line)]);
       })
+      .reduce((a, b) => a.concat(b), [])
       .filter((errors) => Boolean(errors));
   }
 
@@ -113,9 +115,11 @@ export class TDTypeChecker {
 
         const declaratorType = this._findTypeForNode(assignmentExpression.left);
         const assignmentType = this._findTypeForNode(assignmentExpression.right);
+        const assignmentErrors = this._checkCalls([assignmentExpression.right]);
 
-        return this._testTypes(declaratorType, assignmentType, assignmentExpression.loc.start.line);
+        return assignmentErrors.concat([this._testTypes(declaratorType, assignmentType, assignmentExpression.loc.start.line)]);
       })
+      .reduce((a, b) => a.concat(b), [])
       .filter((errors) => Boolean(errors));
   }
 
@@ -141,15 +145,20 @@ export class TDTypeChecker {
   _checkCalls(statements) {
     return statements
       .filter((statement) => {
-        return statement.type === 'ExpressionStatement' &&
+        const isExpressionStatement = statement.type === 'ExpressionStatement' &&
           statement.expression.type === 'CallExpression';
-      })
-      .map((callExpression) => {
-        const functionDeclaration = callExpression.scope.findDeclarationForName(callExpression.expression.callee.name);
+        const isAssignment = statement.type === 'CallExpression';
 
-        return functionDeclaration && callExpression.expression.arguments.map((argument, index) => {
-          const argumentDeclaration = callExpression.scope.findDeclarationForName(argument.name);
-          const argumentDeclarationType = argumentDeclaration && argumentDeclaration.type;
+        return isExpressionStatement || isAssignment;
+      })
+      .map((statement) => {
+        const scope = statement.scope;
+        const callExpression = statement.expression || statement;
+        const name = callExpression.callee.name;
+        const functionDeclaration = scope.findDeclarationForName(name);
+
+        return functionDeclaration && callExpression.arguments.map((argument, index) => {
+          const argumentDeclarationType = this._findTypeForNode(argument, scope);
           const param = functionDeclaration.params[index];
           const paramType = param.type;
 
@@ -237,7 +246,7 @@ export class TDTypeChecker {
     return importDeclarator;
   }
 
-  _findTypeForNode(node) {
+  _findTypeForNode(node, scope=node.scope) {
     let tdDeclaration;
 
     if (!node) {
@@ -248,24 +257,24 @@ export class TDTypeChecker {
       case 'Literal':
         return typeof node.value;
       case 'Identifier':
-        tdDeclaration = node.scope.findDeclarationForName(node.name);
+        tdDeclaration = scope.findDeclarationForName(node.name);
         return tdDeclaration && tdDeclaration.type || 'any';
       case 'BinaryExpression':
-        node.left.scope = node.scope;
-        node.right.scope = node.scope;
+        node.left.scope = scope;
+        node.right.scope = scope;
         return this._findTypeForExpression(node);
       case 'NewExpression':
         return node.callee.name;
       case 'CallExpression':
         if (node.callee.type === 'MemberExpression') {
-          tdDeclaration = node.scope.findDeclarationForStaticMember(node.callee);
+          tdDeclaration = scope.findDeclarationForStaticMember(node.callee);
         } else {
-          tdDeclaration = node.scope.findDeclarationForName(node.callee.name);
+          tdDeclaration = scope.findDeclarationForName(node.callee.name);
         }
 
         return tdDeclaration && tdDeclaration.type || 'any';
       case 'ReturnStatement':
-        node.argument.scope = node.scope;
+        node.argument.scope = scope;
         return this._findTypeForNode(node.argument);
       default:
         return;
