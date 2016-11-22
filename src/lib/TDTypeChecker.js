@@ -39,7 +39,6 @@ export class TDTypeChecker {
       let errors = [];
       let scope;
 
-      debugger;
       errors = errors.concat(this._checkImports(body, ast));
       scope = TDScopeGenerator.generate(ast, parentScope);
 
