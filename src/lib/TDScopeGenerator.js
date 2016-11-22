@@ -139,6 +139,20 @@ export class TDScopeGenerator {
           this._assignTypesToImportSpecifiers(statement, ast);
         }
 
+        if (statement.type === 'VariableDeclaration' &&
+          statement.declarations.length &&
+          statement.declarations.find((declarator) => {
+            return declarator.init &&
+              declarator.init.type === 'CallExpression' &&
+              declarator.init.callee.name === 'require' &&
+              declarator.init.arguments.length &&
+              declarator.init.arguments[0] &&
+              /^\.\//.test(declarator.init.arguments[0].value);
+          })) {
+          this._assignTypesToRequire(statement, ast);
+          debugger;
+        }
+
         if (statement.type === 'ExportNamedDeclaration') {
           return statement.declaration;
         }
@@ -189,7 +203,7 @@ export class TDScopeGenerator {
    * Find the type of the import by searching through the `imports` of the `ast`
    * argument.
    */
-  static _assignTypesToImportSpecifiers(importNode /* t:Object */, ast /* t:Object */) /* t:string */ {
+  static _assignTypesToImportSpecifiers(importNode /* t:Object */, ast /* t:Object */) /* t:Object */ {
     const relevantImport = ast.imports
       .find((anImport) => anImport.source === importNode.source);
 
@@ -208,6 +222,41 @@ export class TDScopeGenerator {
       });
 
     return relevantImport;
+  }
+
+  static _assignTypesToRequire(requireNode /* t:Object */, ast /* t:Object */) /* t:Object */ {
+    const relevantImport = ast.imports
+      .find((anImport) => anImport.source === requireNode
+        .declarations[0]
+        .init
+        .arguments[0]
+        .value
+        .replace(/^\.\//, ''));
+
+    /**
+     * This is an oversimplification, but we'll try and find top level assignments
+     * to module.exports.
+     */
+    const importTypes = relevantImport
+      .ast
+      .body
+      .filter((statement) => {
+        const isAnExpression = statement.type === 'ExpressionStatement';
+        const isAnAssignment = isAnExpression && statement.expression.type === 'AssignmentExpression';
+        const isLeftAStaticMember = isAnAssignment && statement.expression.left.type === 'MemberExpression';
+        const isLeftModuleDotExports = isLeftAStaticMember &&
+          statement.expression.left.object.name === 'module' &&
+          statement.expression.left.property.name === 'exports';
+        const isLeftJustExports = isLeftAStaticMember &&
+          statement.expression.left.object.name === 'exports';
+
+        return isLeftModuleDotExports || isLeftJustExports;
+      })
+      .map((statement) => statement.scope.findDeclarationForName(statement.expression.right.name));
+
+    if (importTypes.length) {
+      requireNode.declarations[0].id.tdType = importTypes[importTypes.length - 1].type;
+    }
   }
 
   /**

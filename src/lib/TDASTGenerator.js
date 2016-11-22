@@ -37,7 +37,10 @@ export class TDASTGenerator {
       const imports /* t:[Object] */ = this._findImports(rootAst);
       const importAsts /* t:[Object] */ = this._generateImportAsts(imports);
 
-      rootAst.imports = importAsts;
+      const requires /* t:[Obejct] */ = this._findRequires(rootAst);
+      const requiresAsts /* t:[Object] */ = this._generateRequiresAsts(requires);
+
+      rootAst.imports = importAsts.concat(requiresAsts);
       rootAst.file = resolve(this._entryFile);
     } catch (e) {
       // For now, eat the errors, it's probably an external module.
@@ -52,6 +55,24 @@ export class TDASTGenerator {
 
   _findImports(ast) /* t:[Object] */ {
     return ast.body.filter((node) => node.type === 'ImportDeclaration');
+  }
+
+  _findRequires(ast) /* t:[Object] */ {
+    return ast.body.filter((node) => {
+        const retval = node.type === 'VariableDeclaration' &&
+          node.declarations.find((declaration) => declaration.init && declaration.init.type === 'CallExpression');
+
+        return retval;
+      })
+      .map((node) => node.declarations)
+      .reduce((a, b) => a.concat(b), [])
+      .filter((declarator) => {
+        return declarator.init &&
+          declarator.init.arguments.length &&
+          /^\.\//.test(declarator.init.arguments[0].value) && // For now, only allow local modules
+          declarator.init.type === 'CallExpression' &&
+          declarator.init.callee.name === 'require';
+      });
   }
 
   _generateImportAsts(importList /* t:[Object] */) /* t:[Object] */ {
@@ -71,5 +92,25 @@ export class TDASTGenerator {
       });
 
     return importList;
+  }
+
+  _generateRequiresAsts(requiresList /* t:[Object] */) /* t:[Object] */ {
+    const pathArray = this._entryFile.split('/');
+    pathArray.pop();
+
+    requiresList = requiresList
+      .map((_requires) => {
+        const source = _requires.init.arguments[0].value.replace(/^\.\//, '');
+        pathArray.push(source);
+        const astGenerator = new TDASTGenerator(pathArray.join('/'));
+        return {
+          astGenerator: astGenerator,
+          ast: astGenerator.ast,
+          specifiers: _requires.specifiers,
+          source: source
+        };
+      });
+
+    return requiresList;
   }
 }

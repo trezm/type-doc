@@ -146,7 +146,6 @@ export class TDTypeAdapter {
         const functionStartLine = functionExpression.loc.start.line;
 
         if (functionStartLine === commentEndLine + 1) {
-          debugger;
           const paramStrings = typeDef.value.match(JSDOC_PARAMS_REGEX);
           const returns = (typeDef.value.match(JSDOC_RETURNS_REGEX) || [])[1];
 
