@@ -50,7 +50,7 @@ Functional:
 
 - [x] Prevent out of scope variable changes
 - [x] Prevent modifying properties on Immutable objects
-- [x] Prevent calling `push`, `pop`, `shift`, `unshift`.
+- [x] Prevent calling `push`, `pop`, `shift`, `unshift` outside of the declared scope (i.e. in child scopes).
 
 Right now if you just run `node test.js` you can see what's currently working :)
 
@@ -59,4 +59,5 @@ Right now if you just run `node test.js` you can see what's currently working :)
 - [ ] Implement understanding of classes and subclasses
 - [ ] Implement union types
 - [ ] Implement structs
+- [ ] Ensure that `map`, `reduce`, etc. return the correct types.
 
