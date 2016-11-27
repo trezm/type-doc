@@ -9,13 +9,7 @@ Type checking with valid JavaScript
 - [TODO](#todo)
 
 ## Setup
-Setup is still a little jenky, right now you have to run the following in order to set it up _once_.
-
-```
-> npm run setup
-```
-
-After that, all you have to do is
+All you have to do is
 
 ```
 > gulp build:dev
@@ -32,39 +26,37 @@ For example,
 > bin/type-doc ./examples/importDirectory.test.js
 ```
 
+### Functional testing
+Simply add the `-f`, or `--functional`, argument to also check for strictly functional, i.e.
+
+```
+> bin/type-doc --functional ./examples/functional.test.js
+```
+
 ## What works right now?
+Check out the tests and examples for currently supported functionality, but among the list we currently have
 
-Basically this:
-```
-function add(x /* t:number */, y /* t:number */) /* t:number */ {
-    return x + y;
-}
+Type Checking:
 
-function subtract(x /* t:number */, y /* t:number */) /* t:number */ {
-    return x - y;
-}
+- [x] Multiple files
+- [x] Assignment checking
+- [x] Checking vs literals
+- [x] Param checking
+- [x] Return checking
+- [x] Class checking
+- [x] Class method checking (params and returns.)
 
-function multiply(x /* t:number */, y /* t:number */) /* t:string */ {
-    return x + y;
-}
+Functional:
 
-function addTwo(x /* t:number */) /* t:number */ {
-    return add(x, 2);
-}
-
-function subtractTwo(x /* t:number */) /* t:string */ {
-    return subtract(x, 2);
-}
-```
+- [x] Prevent out of scope variable changes
+- [x] Prevent modifying properties on Immutable objects
+- [x] Prevent calling `push`, `pop`, `shift`, `unshift`.
 
 Right now if you just run `node test.js` you can see what's currently working :)
 
 ## TODO
 
-- [ ] Move the TODO to actual github issues
-- [ ] Improve grammar to cover more cases
-- [ ] Create a test suite
-- [ ] Clean and break up the `typeChecker`
-  - Should be using more explicit containers for intermediate states, i.e. scopes and parent scopes.
 - [ ] Implement understanding of classes and subclasses
+- [ ] Implement union types
+- [ ] Implement structs
 
