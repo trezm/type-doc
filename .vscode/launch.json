@@ -41,6 +41,19 @@
       "port": 5858,
       "sourceMaps": false,
       "outDir": null
+    },
+    {
+      "name": "Run mocha",
+      "cwd": "${workspaceRoot}",
+      "type": "node",
+      "request": "launch",
+      "preLaunchTask": "build:dev",
+      "program": "${workspaceRoot}/node_modules/mocha/bin/_mocha",
+      "stopOnEntry": false,
+      "args": [
+        "dist/integrationTests/**/*.js"
+      ],
+      "runtimeExecutable": null
     }
   ]
 }

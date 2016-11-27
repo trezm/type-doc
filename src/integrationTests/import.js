@@ -1,6 +1,6 @@
 import { sandbox as s, stub } from 'sinon';
 import { expect } from 'chai';
-import { typeChecker } from '../typeChecker';
+import { TDTypeChecker } from '../lib/TDTypeChecker';
 import * as fs from '../loader/file/fsWrapper';
 
 describe('import', () => {
@@ -24,7 +24,7 @@ import { test } from './test';
       }[file];
     });
 
-    const errors = typeChecker('./main');
+    const errors = new TDTypeChecker('./main').run();
 
     expect(errors.length).to.equal(0);
   });
@@ -41,7 +41,7 @@ var s /* t:string */ = test
       }[file];
     });
 
-    const errors = typeChecker('./main');
+    const errors = new TDTypeChecker('./main').run();
 
     expect(errors[0].extras.expectedType).to.equal('string');
     expect(errors[0].extras.actualType).to.equal('number');
@@ -62,7 +62,7 @@ var s /* t:string */ = test
       }[file];
     });
 
-    const errors = typeChecker('./main');
+    const errors = new TDTypeChecker('./main').run();
 
     expect(errors[0].extras.expectedType).to.equal('string');
     expect(errors[0].extras.actualType).to.equal('number');
@@ -82,7 +82,7 @@ import { test1, test2 } from './test';
       }[file];
     });
 
-    const errors = typeChecker('./main');
+    const errors = new TDTypeChecker('./main').run();
 
     expect(errors[0].extras.expectedType).to.equal('string');
     expect(errors[0].extras.actualType).to.equal('number');
@@ -106,7 +106,7 @@ const thing2 /* t:string */ = test2;
       }[file];
     });
 
-    const errors = typeChecker('./main');
+    const errors = new TDTypeChecker('./main').run();
 
     expect(errors[0].extras.actualType).to.equal('string');
     expect(errors[0].extras.expectedType).to.equal('number');
@@ -128,7 +128,7 @@ const thing1 /* t:number */ = test2;
       }[file];
     });
 
-    const errors = typeChecker('./main');
+    const errors = new TDTypeChecker('./main').run();
 
     expect(errors[0].extras.actualType).to.equal('string');
     expect(errors[0].extras.expectedType).to.equal('number');
@@ -147,7 +147,7 @@ import { Test } from './test';
       }[file];
     });
 
-    const errors = typeChecker('./main');
+    const errors = new TDTypeChecker('./main').run();
 
     expect(errors.length).to.equal(0);
   });

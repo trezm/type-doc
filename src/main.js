@@ -1,8 +1,19 @@
 'use strict';
 
+import { TDFunctionalChecker } from './lib/TDFunctionalChecker';
 import { TDTypeChecker } from './lib/TDTypeChecker';
 
-export function main(entryFile='./examples/functions.test.js') {
+export function main(entryFile='./examples/functions.test.js', checkFunctional=false) {
   const tdTypeChecker = new TDTypeChecker(entryFile);
-  return tdTypeChecker.run();
+  const tdFunctionalChecker = new TDFunctionalChecker(entryFile);
+
+  let results = [];
+
+  results = results.concat(tdTypeChecker.run());
+
+  if (checkFunctional) {
+    results = results.concat(tdFunctionalChecker.run());
+  }
+
+  return results;
 }

@@ -1,28 +1,28 @@
 import { stub } from 'sinon';
 import { expect } from 'chai';
-import { typeChecker } from '../typeChecker';
+import { TDTypeChecker } from '../lib/TDTypeChecker';
 
 describe('functions', () => {
   describe('functions should test return values of arguments', () => {
     it('should allow arguments and not throw errors', () => {
-      const errors = typeChecker(`
+      const errors = new TDTypeChecker(`
 function add(x /* t:number */, y /* t:number */) /* t:number */ {
   return x + y;
 }
 
 function subtract(x /* t:number */, y /* t:number */) /* t:number */ {
   return x - y;
-}`);
+}`).run();
 
       expect(errors).to.exist;
       expect(errors.length).to.equal(0);
     });
 
     it('should throw errors if arguments are returned and the type is wrong', () => {
-      const errors = typeChecker(`
+      const errors = new TDTypeChecker(`
 function multiply(x /* t:number */, y /* t:number */) /* t:string */ {
   return x * y;
-}`);
+}`).run();
 
       expect(errors).to.exist;
       expect(errors.length).to.equal(1);
@@ -33,7 +33,7 @@ function multiply(x /* t:number */, y /* t:number */) /* t:string */ {
 
   describe('function calls', () => {
     it('should allow function calls as returns', () => {
-      const errors = typeChecker(`
+      const errors = new TDTypeChecker(`
 function add(x /* t:number */, y /* t:number */) /* t:number */ {
   return x + y;
 }
@@ -42,21 +42,21 @@ function addTwo(x /* t:number */) /* t:number */ {
   var two /* t:number */ = 2;
 
   return add(x, two);
-}`);
+}`).run();
 
       expect(errors).to.exist;
       expect(errors.length).to.equal(0);
     });
 
     it('should check the return type of the function', () => {
-      const errors = typeChecker(`
+      const errors = new TDTypeChecker(`
 function subtract(x /* t:number */, y /* t:number */) /* t:number */ {
   return x - y;
 }
 
 function subtractTwo(x /* t:number */) /* t:string */ {
   return subtract(x, 2);
-}`);
+}`).run();
 
       expect(errors).to.exist;
       expect(errors.length).to.equal(1);
@@ -65,7 +65,7 @@ function subtractTwo(x /* t:number */) /* t:string */ {
     });
 
     it('should check the argument types', () => {
-      const errors = typeChecker(`
+      const errors = new TDTypeChecker(`
 const s /* t:string */ = 'some string';
 const n /* t:number */ = 1;
 
@@ -74,7 +74,7 @@ function subtract(x /* t:number */, y /* t:number */) /* t:number */ {
 }
 
 subtract(n, s);
-`);
+`).run();
 
       expect(errors).to.exist;
       expect(errors.length).to.equal(1);
@@ -85,7 +85,7 @@ subtract(n, s);
 
   describe('functions in functions should still respect types', () => {
     it('should allow functions in functions', () => {
-      const errors = typeChecker(`                  // 1
+      const errors = new TDTypeChecker(`                  // 1
 function a(x /* t:string */) /* t:string */ {       // 2
   function b(y /* t:string */) /* t:string */ {     // 3
     function c(z /* t:string */) /* t:string */ {   // 4
@@ -96,14 +96,14 @@ function a(x /* t:string */) /* t:string */ {       // 2
   }                                                 // 9
                                                     // 10
   return b(x);                                      // 11
-}`);
+}`).run();
 
       expect(errors).to.exist;
       expect(errors.length).to.equal(0);
     });
 
     it('should identify type errors from functions in functions declared in parent scopes', () => {
-      const errors = typeChecker(`
+      const errors = new TDTypeChecker(`
 function d(x /* t:string */) /* t:string */ {
   function e(y /* t:string */) /* t:string */ {
     function f(z /* t:string */) /* t:number */ {
@@ -114,7 +114,7 @@ function d(x /* t:string */) /* t:string */ {
   }
 
   return e(x);
-}`);
+}`).run();
 
       expect(errors).to.exist;
       expect(errors.length).to.equal(2);

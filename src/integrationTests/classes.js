@@ -1,10 +1,10 @@
 import { stub } from 'sinon';
 import { expect } from 'chai';
-import { typeChecker } from '../typeChecker';
+import { TDTypeChecker } from '../lib/TDTypeChecker';
 
 describe('classes', () => {
   it('should respect `this.`', () => {
-    const errors = typeChecker(`
+    const errors = new TDTypeChecker(`
 class TestClass {
   constructor() {}
 
@@ -16,13 +16,13 @@ class TestClass {
     return this.aGoodMethod1(s);
   }
 }
-`);
+`).run();
 
     expect(errors.length).to.equal(0);
   });
 
   it('should be able to test against class methods', () => {
-    const errors = typeChecker(`
+    const errors = new TDTypeChecker(`
 class TestClass {
   constructor() {}
 
@@ -34,14 +34,14 @@ class TestClass {
     return this.aBadMethod(s);
   }
 }
-`);
+`).run();
 
     expect(errors[0].extras.expectedType).to.equal('number');
     expect(errors[0].extras.actualType).to.equal('string');
   });
 
   it('should check method argument types', () => {
-    const errors = typeChecker(`
+    const errors = new TDTypeChecker(`
 class TestClass {
   constructor() {}
 
@@ -53,7 +53,7 @@ class TestClass {
     this.aBadMethod(n);
   }
 }
-`);
+`).run();
 
     expect(errors[0].extras.expectedType).to.equal('number');
     expect(errors[0].extras.actualType).to.equal('string');

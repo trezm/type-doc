@@ -17,10 +17,10 @@ export class TDScope {
     this.declarations.push(declaration);
   }
 
-  findDeclarationForName(name /* t:string */) /* t:TDDeclaration */ {
+  findDeclarationForName(name /* t:string */, limitScope /* t:boolean */) /* t:TDDeclaration */ {
     const declaration = this.declarations.find((declaration) => declaration.name === name);
 
-    return declaration || this.parent && this.parent.findDeclarationForName(name);
+    return declaration || !limitScope && this.parent && this.parent.findDeclarationForName(name);
   }
 
   findDeclarationForStaticMember(node /* t:Object */) /* t:TDDeclaration */ {

@@ -1,11 +1,11 @@
 import { stub } from 'sinon';
 import { expect } from 'chai';
-import { typeChecker } from '../typeChecker';
+import { TDTypeChecker } from '../lib/TDTypeChecker';
 
 describe('jsdoc', () => {
   describe('functions', () => {
     it('should properly recognize errors using jsdoc types', () => {
-      const errors = typeChecker(`
+      const errors = new TDTypeChecker(`
 const n /* t:number */ = 1;
 const s /* t:string */ = 'asdf';
 
@@ -20,7 +20,7 @@ function add(a, b) {
   return a + b;
 }
 
-add(n, s)`);
+add(n, s)`).run();
 
       expect(errors).to.exist;
       expect(errors.length).to.equal(1);
@@ -31,7 +31,7 @@ add(n, s)`);
 
   describe('class methods', () => {
     it('should properly recognize errors using jsdoc types', () => {
-      const errors = typeChecker(`
+      const errors = new TDTypeChecker(`
 const n /* t:number */ = 1;
 const s /* t:string */ = 'asdf';
 
@@ -51,7 +51,7 @@ class TestClass {
     return a + b;
   }
 }
-`);
+`).run();
 
       expect(errors).to.exist;
       expect(errors.length).to.equal(1);
@@ -60,7 +60,7 @@ class TestClass {
     });
 
     it('should check return values of other methods', () => {
-      const errors = typeChecker(`
+      const errors = new TDTypeChecker(`
 class TestClass {
   constructor() {
   }
@@ -87,7 +87,7 @@ class TestClass {
     return this.add(a, b);
   }
 }
-`);
+`).run();
 
       expect(errors).to.exist;
       expect(errors.length).to.equal(1);

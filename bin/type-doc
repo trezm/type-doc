@@ -1,8 +1,12 @@
 #!/usr/bin/env node
 'use strict';
 
+const isFunctional = process.argv[2] === '-f' ||
+  process.argv[2] === '--functional';
+const entryFile = isFunctional ? process.argv[3] : process.argv[2];
+
 const typeChecker = require('../dist/main').main;
-const results = typeChecker(process.argv[2]);
+const results = typeChecker(entryFile, isFunctional);
 
 results.forEach((result) => {
   console.log(result.toString({ colors: true }));
