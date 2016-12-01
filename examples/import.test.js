@@ -1,3 +1,3 @@
-import { test } from './badDeclaration.test';
+import { test } from './badDeclaration';
 
-var s /* t:string */ = test;
+var s /* t:String */ = test;

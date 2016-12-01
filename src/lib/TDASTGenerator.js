@@ -2,7 +2,7 @@
 
 import { isAbsolute, resolve } from 'path';
 import { parse } from 'esprima';
-import { readFileSync } from '../loader/file/fsWrapper';
+import * as fs from '../loader/file/fsWrapper';
 
 export const DEFAULT_OPTIONS = {
   comment: true,
@@ -11,11 +11,11 @@ export const DEFAULT_OPTIONS = {
 };
 
 export class TDASTGenerator {
-  constructor(entryFile /* t:string */, options=DEFAULT_OPTIONS) {
+  constructor(entryFile /* t:String */, options=DEFAULT_OPTIONS) {
     this._entryFile = entryFile;
 
     try {
-      this._entryFileContents = readFileSync(entryFile);
+      this._entryFileContents = fs.readFileSync(entryFile);
     } catch(e) {
       this._entryFileContents = this._entryFile;
     }

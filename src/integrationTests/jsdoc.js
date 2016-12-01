@@ -6,15 +6,15 @@ describe('jsdoc', () => {
   describe('functions', () => {
     it('should properly recognize errors using jsdoc types', () => {
       const errors = new TDTypeChecker(`
-const n /* t:number */ = 1;
-const s /* t:string */ = 'asdf';
+const n /* t:Number */ = 1;
+const s /* t:String */ = 'asdf';
 
 /**
- * Add two numbers
+ * Add two Numbers
  *
- * @param {number} a - The first number
- * @param {number} b - The second number
- * @returns {number} - the sum of the arguments
+ * @param {Number} a - The first Number
+ * @param {Number} b - The second Number
+ * @returns {Number} - the sum of the arguments
  */
 function add(a, b) {
   return a + b;
@@ -24,28 +24,28 @@ add(n, s)`).run();
 
       expect(errors).to.exist;
       expect(errors.length).to.equal(1);
-      expect(errors[0].extras.expectedType).to.equal('number');
-      expect(errors[0].extras.actualType).to.equal('string');
+      expect(errors[0].extras.expectedType).to.equal('Number');
+      expect(errors[0].extras.actualType).to.equal('String');
     });
   });
 
   describe('class methods', () => {
     it('should properly recognize errors using jsdoc types', () => {
       const errors = new TDTypeChecker(`
-const n /* t:number */ = 1;
-const s /* t:string */ = 'asdf';
+const n /* t:Number */ = 1;
+const s /* t:String */ = 'asdf';
 
 class TestClass {
   constructor() {
-    const s /* t:string */ = this.add(1, 2);
+    const s /* t:String */ = this.add(1, 2);
   }
 
   /**
-   * Add two numbers
+   * Add two Numbers
    *
-   * @param {number} a - The first number
-   * @param {number} b - The second number
-   * @returns {number} - the sum of the arguments
+   * @param {Number} a - The first Number
+   * @param {Number} b - The second Number
+   * @returns {Number} - the sum of the arguments
    */
   add(a, b) {
     return a + b;
@@ -55,8 +55,8 @@ class TestClass {
 
       expect(errors).to.exist;
       expect(errors.length).to.equal(1);
-      expect(errors[0].extras.expectedType).to.equal('string');
-      expect(errors[0].extras.actualType).to.equal('number');
+      expect(errors[0].extras.expectedType).to.equal('String');
+      expect(errors[0].extras.actualType).to.equal('Number');
     });
 
     it('should check return values of other methods', () => {
@@ -66,22 +66,22 @@ class TestClass {
   }
 
   /**
-   * Add two numbers
+   * Add two Numbers
    *
-   * @param {number} a - The first number
-   * @param {number} b - The second number
-   * @returns {number} - the sum of the arguments
+   * @param {Number} a - The first Number
+   * @param {Number} b - The second Number
+   * @returns {Number} - the sum of the arguments
    */
   add(a, b) {
     return a + b;
   }
 
   /**
-   * Add two numbers
+   * Add two Numbers
    *
-   * @param {string} a - The first number
-   * @param {string} b - The second number
-   * @returns {string} - the sum of the arguments
+   * @param {String} a - The first Number
+   * @param {String} b - The second Number
+   * @returns {String} - the sum of the arguments
    */
   adds(a, b) {
     return this.add(a, b);
@@ -91,8 +91,8 @@ class TestClass {
 
       expect(errors).to.exist;
       expect(errors.length).to.equal(1);
-      expect(errors[0].extras.expectedType).to.equal('string');
-      expect(errors[0].extras.actualType).to.equal('number');
+      expect(errors[0].extras.expectedType).to.equal('String');
+      expect(errors[0].extras.actualType).to.equal('Number');
     });
   });
 });

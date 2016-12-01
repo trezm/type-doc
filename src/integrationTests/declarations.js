@@ -31,74 +31,83 @@ class TestClass {
 class TestClass {
   constructor() {}
 
-  aBadMethod(s /* t:string */) /* t:number */ {
+  aBadMethod(s /* t:String */) /* t:Number */ {
     return s;
   }
 }
 `).run();
 
-      expect(errors[0].extras.expectedType).to.equal('number');
-      expect(errors[0].extras.actualType).to.equal('string');
+      expect(errors[0].extras.expectedType).to.equal('Number');
+      expect(errors[0].extras.actualType).to.equal('String');
     });
   });
 
   describe('with functions', () => {
     it('should check the return type of the called expression', () => {
       const errors = new TDTypeChecker(`
-var hi /* t:number */ = stringinator();
+var hi /* t:Number */ = stringinator();
 
-function stringinator() /* t:string */ {
+function stringinator() /* t:String */ {
   return 'asdf';
 }
 `).run();
 
-      expect(errors[0].extras.expectedType).to.equal('number');
-      expect(errors[0].extras.actualType).to.equal('string');
+      expect(errors[0].extras.expectedType).to.equal('Number');
+      expect(errors[0].extras.actualType).to.equal('String');
     });
 
     it('should check the params of the called expression', () => {
       const errors = new TDTypeChecker(`
-var hi /* t:string */ = stringinator('1');
+var hi /* t:String */ = stringinator('1');
 
-function stringinator(n /* t:number */) /* t:string */ {
+function stringinator(n /* t:Number */) /* t:String */ {
   return '' + n;
 }
 `).run();
 
-      expect(errors[0].extras.expectedType).to.equal('number');
-      expect(errors[0].extras.actualType).to.equal('string');
+      expect(errors[0].extras.expectedType).to.equal('Number');
+      expect(errors[0].extras.actualType).to.equal('String');
     });
   });
 
   describe('with constants', () => {
     it('should check against string constants', () => {
       const errors = new TDTypeChecker(`
-var hi /* t:number */ = 'asdf';
+var hi /* t:Number */ = 'asdf';
 `).run();
 
-      expect(errors[0].extras.expectedType).to.equal('number');
-      expect(errors[0].extras.actualType).to.equal('string');
+      expect(errors[0].extras.expectedType).to.equal('Number');
+      expect(errors[0].extras.actualType).to.equal('String');
     });
 
-    it('should check against number constants', () => {
+    it('should check against Number constants', () => {
       const errors = new TDTypeChecker(`
-var bye /* t:string */ = 1;
+var bye /* t:String */ = 1;
 `).run();
 
-      expect(errors[0].extras.expectedType).to.equal('string');
-      expect(errors[0].extras.actualType).to.equal('number');
+      expect(errors[0].extras.expectedType).to.equal('String');
+      expect(errors[0].extras.actualType).to.equal('Number');
     });
   });
 
   describe('with variables', () => {
     it('should check against earlier assignments to the variable', () => {
       const errors = new TDTypeChecker(`
-var greeting /* t:string */ = 'hello'
-var hi /* t:number */ = greeting;
+var greeting /* t:String */ = 'hello'
+var hi /* t:Number */ = greeting;
 `).run();
 
-      expect(errors[0].extras.expectedType).to.equal('number');
-      expect(errors[0].extras.actualType).to.equal('string');
+      expect(errors[0].extras.expectedType).to.equal('Number');
+      expect(errors[0].extras.actualType).to.equal('String');
+    });
+
+    it('should respect multiple types', () => {
+      const errors = new TDTypeChecker(`
+var aNumber /* t:String | Number */ = '1'
+var hi /* t:Number */ = greeting;
+`).run();
+
+      expect(errors.length).to.equal(0);
     });
   });
 });

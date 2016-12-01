@@ -1,8 +1,5 @@
-const n /* t:number */ = 1;
-const s /* t:string */ = n;
-let u /* t:Object */;
-u = n;
+var hi /* t:String */ = stringinator('1');
 
-function returnS(s1 /* t:string */) /* t:string */ {
-  return s + s1;
+function stringinator(n /* t:Number */) /* t:String */ {
+  return '' + n;
 }

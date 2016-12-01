@@ -8,7 +8,7 @@ export class File {
     this.importedFiles = importedFiles;
   }
 
-  toString() /* t:string */ {
+  toString() /* t:String */ {
     const stringifiedErrors = this.errors
       .reduce((a, b) => a + `${this.fileName}: ${b.toString()}`, '');
 

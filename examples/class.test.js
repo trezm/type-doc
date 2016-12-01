@@ -1,13 +1,11 @@
-const s = () => 'hello';
-
 class TestClass {
   constructor() {}
 
-  aFineMethod(s /* t:string */) /* t:string */ {
+  aFineMethod(s /* t:String */) /* t:String */ {
     return s;
   }
 
-  toNumber(s /* t:number */) /* t:string */ {
-    return this.aFineMethod(s);
+  toNumber(n /* t:Number */) /* t:Number */ {
+    this.aFineMethod(n);
   }
 }

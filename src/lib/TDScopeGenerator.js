@@ -5,69 +5,157 @@ import { TDMethodDeclaration } from './TDMethodDeclaration';
 import { TDScope } from './TDScope';
 
 export class TDScopeGenerator {
-  static generate(ast /* t:Object */, parentScope /* t:TDScope */) /* t:TDScope */ {
-    const declarations = this._findDeclarationsWithTypes(ast);
-    const functionDeclarations = this._findFunctionDeclarationsWithTypes(ast);
-    const methodDefinitions = this._findMethodDefinitions(ast);
-    const nodesForChildScopes = this._findNodesForChildScopes(ast);
-    const scope = new TDScope(parentScope);
-    ast.scope = scope;
-
-    declarations.forEach((declaration) => {
-      const tdType = this._searchForNodeType(declaration, ast);
-      const tdDeclaration = new TDDeclaration(tdType, declaration.name);
-
-      scope.addDeclaration(tdDeclaration);
-    });
-
-    functionDeclarations.forEach((declaration) => {
-      const tdType = this._searchForNodeType(declaration.id, ast);
-      const tdDeclaration = new TDMethodDeclaration(tdType, declaration.id.name);
-
-      declaration.params.forEach((param) => {
-        tdDeclaration.addParam(new TDDeclaration(param.tdType, param.name));
-      });
-
-      scope.addDeclaration(tdDeclaration);
-    });
-
-    methodDefinitions.forEach((declaration) => {
-      const tdType = this._searchForNodeType(declaration.value, ast);
-      const tdDeclaration = new TDMethodDeclaration(tdType, declaration.key.name);
-
-      declaration.value.params.forEach((param) => {
-        tdDeclaration.addParam(new TDDeclaration(param.tdType, param.name));
-      });
-
-      scope.addBoundMethodDeclaration(tdDeclaration);
-    });
-
-    this._assignScopeToStatements(ast, scope);
-
-    nodesForChildScopes.forEach((node) => {
-      const childScope = this._generateChildScopeForNode(node, scope);
-      this.generate(node, childScope);
-    });
-
-    ast.scope = scope;
-    return scope;
+  constructor(ast) {
+    this.ast = ast;
   }
 
-  static _findNodesForChildScopes(ast /* t:Object */) /* t:[Object] */ {
-    const nodesWithScopes = this._getBodyForAst(ast)
-      .filter((node) => {
-        return node.type === 'ClassDeclaration' ||
-          node.type === 'FunctionDeclaration' ||
-          node.type === 'MethodDefinition';
-      });
+  _assignDeclarationTypes(node, existingScope=new TDScope()) {
+    node.scope = existingScope;
 
-    return nodesWithScopes;
+    switch (node.type) {
+      case 'MethodDefinition': {
+        const scope = new TDScope(existingScope);
+
+        node.value.body.body.forEach((statement) => this._assignDeclarationTypes(statement, scope));
+
+        const tdType = this._searchForNodeType(node);
+        const tdDeclaration = new TDMethodDeclaration(tdType, node.key.name);
+
+        node.value.params.forEach((param) => {
+          tdDeclaration.addParam(new TDDeclaration(param.tdType, param.name));
+          scope.addDeclaration(new TDDeclaration(param.tdType, param.name));
+        });
+
+        existingScope.addBoundMethodDeclaration(tdDeclaration);
+        return;
+      }
+      case 'Program':
+        node.body.forEach((statement) => this._assignDeclarationTypes(statement, existingScope));
+        return;
+      case 'ClassDeclaration': {
+        const scope = new TDScope(existingScope);
+        scope.initializeBinding();
+
+        node.body.body.forEach((statement) => this._assignDeclarationTypes(statement, scope));
+        return;
+      }
+      case 'ArrowFunctionExpression': {
+        const body = node.body && node.body.body || [node.body];
+        const arrowExpressionScope = new TDScope(existingScope);
+        node.scope = arrowExpressionScope;
+        node.params
+          .forEach((param) => {
+            arrowExpressionScope.addDeclaration(new TDDeclaration(param.tdType, param.name));
+          });
+
+        body.forEach((statement) => this._assignDeclarationTypes(statement, arrowExpressionScope));
+        return;
+      }
+      case 'FunctionDeclaration': {
+        const scope = new TDScope(existingScope);
+        const tdType = this._searchForNodeType(node.id);
+        const tdDeclaration = new TDMethodDeclaration(tdType, node.id.name);
+        scope.initializeBinding();
+
+        node.params.forEach((param) => {
+          let paramDeclaration;
+
+          if (param.tdType.typeString.indexOf('->') > -1) {
+            paramDeclaration = new TDMethodDeclaration(param.tdType, param.name);
+          } else {
+            paramDeclaration = new TDDeclaration(param.tdType, param.name);
+          }
+
+          tdDeclaration.addParam(new TDDeclaration(param.tdType, param.name));
+          scope.addDeclaration(new TDDeclaration(param.tdType, param.name));
+        });
+
+        existingScope.addDeclaration(tdDeclaration);
+        node.body.body.forEach((statement) => this._assignDeclarationTypes(statement, scope));
+        return;
+      }
+      case 'ExportNamedDeclaration': {
+        this._assignDeclarationTypes(node.declaration, existingScope);
+        return;
+      }
+      case 'ImportDeclaration': {
+        const imports = this.ast.imports;
+        const relevantImport = imports.find((anImport) => anImport.source === node.source);
+
+        new TDScopeGenerator(relevantImport.ast).generate();
+
+        node.specifiers.forEach((specifier) => {
+          const declaration = this._findImportOrRequireForName(specifier.imported.name, relevantImport);
+
+          if (declaration) {
+            existingScope.addDeclaration(new TDDeclaration(declaration.type, specifier.local.name));
+          }
+        });
+        return;
+      }
+      case 'ImportSpecifier': {
+        console.log('node:', node);
+        return;
+      }
+      case 'VariableDeclaration': {
+        node.declarations.forEach((declarator) => this._assignDeclarationTypes(declarator, existingScope));
+        return;
+      }
+      case 'VariableDeclarator': {
+        if (node.init &&
+          node.init.callee &&
+          node.init.callee.name === 'require') {
+          const importName = node.init.arguments[0] &&
+            node.init.arguments[0].value.replace(/^\.\//, '');
+          const imports = this.ast.imports;
+          const relevantImport = imports.find((anImport) => anImport.source === importName);
+
+          new TDScopeGenerator(relevantImport.ast).generate();
+          const declaration = this._findImportOrRequireForName(undefined, relevantImport);
+
+          if (declaration) {
+            existingScope.addDeclaration(new TDDeclaration(declaration.type, node.id.name));
+          }
+        } else {
+          const tdType = this._searchForNodeType(node);
+          const tdDeclaration = new TDDeclaration(tdType, node.id.name);
+
+          node.init && this._assignDeclarationTypes(node.init, existingScope);
+          existingScope.addDeclaration(tdDeclaration);
+        }
+        return;
+      }
+      case 'ReturnStatement': {
+        this._assignDeclarationTypes(node.argument, existingScope);
+        return;
+      }
+      case 'BinaryExpression': {
+        this._assignDeclarationTypes(node.left, existingScope);
+        this._assignDeclarationTypes(node.right, existingScope);
+        return;
+      }
+      case 'ExpressionStatement': {
+        this._assignDeclarationTypes(node.expression, existingScope);
+        return;
+      }
+      case 'CallExpression': {
+        node.arguments.forEach((argument) => this._assignDeclarationTypes(argument, existingScope));
+        return;
+      }
+      default:
+        // console.log('unidentified node:', node.type);
+        return;
+    }
+  }
+
+  generate(parentScope /* t:TDScope */) /* t:TDScope */ {
+    this._assignDeclarationTypes(this.ast);
   }
 
   /**
    * Assign scope to all of the statements in the body
    */
-  static _assignScopeToStatements(ast /* t:Object */, scope /* t:TDScope */) {
+  _assignScopeToStatements(ast /* t:Object */, scope /* t:TDScope */) {
     const statements = this._getBodyForAst(ast)
       .forEach((statement) => statement.scope = scope);
   }
@@ -75,11 +163,13 @@ export class TDScopeGenerator {
   /**
    * Search for node type
    */
-  static _searchForNodeType(node /* t:Object */, ast /* t:Object */) /* t:string? */ {
+  _searchForNodeType(node /* t:Object */, ast /* t:Object */) /* t:String? */ {
     switch (node.type) {
       case 'Identifier':
       case 'FunctionDeclaration':
       case 'FunctionExpression':
+      case 'MethodDefinition':
+      case 'VariableDeclarator':
         return node.tdType;
       default:
         return undefined;
@@ -87,10 +177,39 @@ export class TDScopeGenerator {
   }
 
   /**
+   * Find type for import or require
+   */
+  _findImportOrRequireForName(name /* t:String */, relevantImport /* t:Object */) {
+    const declaration = relevantImport
+      .ast
+      .body
+      .map((statement) => {
+        const isTypedES6Export = statement.type === 'ExportNamedDeclaration' &&
+          statement.scope.findDeclarationForName(name);
+
+        const isAnExpression = statement.type === 'ExpressionStatement';
+        const isAnAssignment = isAnExpression && statement.expression.type === 'AssignmentExpression';
+        const isLeftAStaticMember = isAnAssignment && statement.expression.left.type === 'MemberExpression';
+        const isLeftModuleDotExports = isLeftAStaticMember &&
+          statement.expression.left.object.name === 'module' &&
+          statement.expression.left.property.name === 'exports';
+        const isLeftJustExports = isLeftAStaticMember &&
+          statement.expression.left.object.name === 'exports';
+        const isTypedNodeExport = (isLeftModuleDotExports || isLeftJustExports) &&
+          statement.scope.findDeclarationForName(statement.expression.right.name);
+
+        return isTypedES6Export || isTypedNodeExport;
+      })
+      .find((exists) => exists);
+
+    return declaration;
+  }
+
+  /**
    * Generates an intermediate child scope based on parameters and anything else
    * that would not be contained within the parent scope.
    */
-  static _generateChildScopeForNode(node /* t:Object */, parent /* t:TDScope */) /* t:TDScope */ {
+  _generateChildScopeForNode(node /* t:Object */, parent /* t:TDScope */) /* t:TDScope */ {
     const childScope = new TDScope(parent);
     const functionParams = node.params;
     const methodParams = node.value && node.value.params;
@@ -120,11 +239,11 @@ export class TDScopeGenerator {
    *   - ClassDeclarations
    *   - Function params
    */
-  static _findDeclarationsWithTypes(ast /* t:Object */) /* t:[Object] */ {
+  _findDeclarationsWithTypes(ast /* t:Object */) /* t:[Object] */ {
     const declarationTypes = {
       'ExportNamedDeclaration': true,
       'ImportDeclaration': true,
-      'MethodDefinition': true,
+      // 'MethodDefinition': true,
       'VariableDeclaration': true
     };
 
@@ -165,7 +284,7 @@ export class TDScopeGenerator {
     return statements;
   }
 
-  static _findFunctionDeclarationsWithTypes(ast /* t:Object */) {
+  _findFunctionDeclarationsWithTypes(ast /* t:Object */) {
     const declarationTypes = {
       'ExportNamedDeclaration': true,
       'FunctionDeclaration': true
@@ -188,10 +307,35 @@ export class TDScopeGenerator {
     return statements;
   }
 
+  _findCallExpressions(ast) {
+    const declarationTypes = {
+      'ExpressionStatement': true,
+      'VariableDeclaration': true
+    };
+
+    // ast.body for programs, ast.body.body for functions
+    const statements = this._getBodyForAst(ast)
+      .filter((statement) => declarationTypes[statement.type])
+      .filter((statement) => !statement.expression || statement.expression.type === 'CallExpression')
+      .map((statement) => {
+        if (statement.type === 'VariableDeclaration') {
+          return statement
+            .declarations
+            .filter((declaration) => declaration.init && declaration.init.type === 'CallExpression')
+            .map((declaration) => declaration.init);
+        } else {
+          return statement.expression;
+        }
+      })
+      .reduce((a, b) => a.concat(b), []);
+
+    return statements;
+  }
+
   /**
    * Find any method definitions in the current ast.
    */
-  static _findMethodDefinitions(ast /* t:Object */) {
+  _findMethodDefinitions(ast /* t:Object */) {
     const statements = this._getBodyForAst(ast)
       .filter((statement) => statement.type === 'MethodDefinition');
 
@@ -202,7 +346,7 @@ export class TDScopeGenerator {
    * Find the type of the import by searching through the `imports` of the `ast`
    * argument.
    */
-  static _assignTypesToImportSpecifiers(importNode /* t:Object */, ast /* t:Object */) /* t:Object */ {
+  _assignTypesToImportSpecifiers(importNode /* t:Object */, ast /* t:Object */) /* t:Object */ {
     const relevantImport = ast.imports
       .find((anImport) => anImport.source === importNode.source);
 
@@ -223,7 +367,7 @@ export class TDScopeGenerator {
     return relevantImport;
   }
 
-  static _assignTypesToRequire(requireNode /* t:Object */, ast /* t:Object */) /* t:Object */ {
+  _assignTypesToRequire(requireNode /* t:Object */, ast /* t:Object */) /* t:Object */ {
     const relevantImport = ast.imports
       .find((anImport) => anImport.source === requireNode
         .declarations[0]
@@ -261,7 +405,7 @@ export class TDScopeGenerator {
   /**
    * Get the body for a given ast
    */
-  static _getBodyForAst(ast) {
+  _getBodyForAst(ast) {
     const functionBody = ast.body && ast.body.body;
     const methodBody = ast.value && ast.value.body.body;
     const programBody = ast.body;

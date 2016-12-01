@@ -2,8 +2,9 @@
 
 import { TDDeclaration } from './TDDeclaration';
 import { TDScope } from './TDScope';
+import { TDType } from './TDType';
 
-const TYPEDEF_REGEX = /^\s*t:([^\s]+)\s*$/;
+const TYPEDEF_REGEX = /^\s*t:(.+)$/;
 const JSDOC_PARAMS_REGEX = /@param\s*\{[^\}]+\}\s*[^\s]+/g;
 const JSDOC_SINGLE_PARAM_REGEX = /@param\s*\{([^\}]+)\}\s*\[?([^\s\]]+)\]?/;
 const JSDOC_RETURNS_REGEX = /@returns\s*\{([^\}]+)\}/;
@@ -20,175 +21,198 @@ export class TDTypeAdapter {
     return this._ast;
   }
 
-  _assignDeclarationTypes(ast, parentScope) {
-    let body = (ast && ast.body) || (ast && ast.value && ast.value.body);
-    body = body.body || body;
+  _assignDeclarationTypes(node) {
+    switch (node.type) {
+      case 'MethodDefinition': {
+        node.value.body.body.forEach((statement) => this._assignDeclarationTypes(statement));
+        node.value.params.forEach((param) => this._addTypeToParameter(param));
+        this._addTypeToFunction(node.value, node.key);
+        this._addJSDocTypeToClassMethod(node.value);
+        node.tdType = node.value.tdType;
 
-    if (body) {
-      const scope = new TDScope(parentScope);
-
-      body.filter((statement) => Boolean(statement.body || (statement.value && statement.value.body)))
-        .forEach((statement) => this._assignDeclarationTypes(statement, scope));
-
-      this._typeDefs
-        .forEach((typeDefComment) => {
-          this._assignTypeForDeclarationFromTypeDef(body, typeDefComment, scope);
-          this._assignTypeForExportDeclarationFromTypeDef(body, typeDefComment, scope);
-          this._assignTypeForParameterFromTypeDef(body, typeDefComment, scope);
-          this._assignTypeForFunctionFromTypeDef(body, typeDefComment, scope);
-          this._assginTypeForClassMethodsFromTypeDef(body, typeDefComment, scope);
-        });
-
-      this._jsDocDefs
-        .forEach((jsDocComment) => {
-          this._assignTypeForFunctionFromJSDoc(body, jsDocComment, scope);
-          this._assignTypeForClassMethodsFromJSDoc(body, jsDocComment, scope);
-        });
+        return;
+      }
+      case 'Program':
+        node.body.forEach((statement) => this._assignDeclarationTypes(statement));
+        return;
+      case 'ClassDeclaration': {
+        node.body.body.forEach((statement) => this._assignDeclarationTypes(statement));
+        return;
+      }
+      case 'ArrowFunctionExpression': {
+        const body = node.body && node.body.body || [node.body];
+        body.forEach((statement) => this._assignDeclarationTypes(statement));
+        node.params.forEach((param) => this._addTypeToParameter(param));
+        this._addTypeToFunction(node, node.id);
+        this._addJSDocTypeToFunction(node);
+        return;
+      }
+      case 'FunctionDeclaration': {
+        node.body.body.forEach((statement) => this._assignDeclarationTypes(statement));
+        node.params.forEach((param) => this._addTypeToParameter(param));
+        this._addTypeToFunction(node, node.id);
+        this._addJSDocTypeToFunction(node);
+        return;
+      }
+      case 'ExpressionStatement': {
+        this._assignDeclarationTypes(node.expression);
+        return;
+      }
+      case 'ReturnStatement': {
+        this._assignDeclarationTypes(node.argument);
+        return;
+      }
+      case 'CallExpression': {
+        node.arguments.forEach((argument) => this._assignDeclarationTypes(argument));
+        return;
+      }
+      case 'VariableDeclaration': {
+        node.declarations.forEach((declarator) => this._assignDeclarationTypes(declarator));
+        return;
+      }
+      case 'VariableDeclarator': {
+        if (node.init &&
+          node.init.callee &&
+          node.init.callee.name === 'require') {
+          this._addTypeToRequire(node);
+        } else if (node.init) {
+          this._assignDeclarationTypes(node.init);
+          this._addTypeToDeclarator(node);
+        } else {
+          this._addTypeToDeclarator(node);
+        }
+        return;
+      }
+      case 'ExportNamedDeclaration': {
+        this._assignDeclarationTypes(node.declaration);
+        return;
+      }
+      case 'ImportDeclaration': {
+        this._addTypeToImport(node);
+        return;
+      }
+      case 'ImportSpecifier': {
+        throw new Error('Unhandled ImportSpecifier');
+        return;
+      }
+      default:
+        // console.log('unidentified node:', node.type);
+        return;
     }
   }
 
   /**
-   * Note that this is not a pure function and _will_ alter the values within
-   * the `ast` argument.
+   * New single node methods
    */
-  _assignTypeForDeclarationFromTypeDef(ast, typeDef) {
-    const foundStatement = ast
-      .filter((statement) => statement.type === 'VariableDeclaration')
-      .map((variableDeclaration) => variableDeclaration.declarations)
-      .reduce((a, b) => a.concat(b), [])
-      .find((variableDeclarator) => this._positionEqual(variableDeclarator.id.loc.end, typeDef.loc.start, { adjacent: true }));
+  _addJSDocTypeToFunction(node) {
+    const foundType = this._jsDocDefs.find((typeDef) => {
+      const commentEndLine = typeDef.loc.end.line;
+      const functionStartLine = node.loc.start.line;
 
-    if (foundStatement) {
-      foundStatement.id.tdType = typeDef.value.match(TYPEDEF_REGEX)[1];
+      return functionStartLine === commentEndLine + 1;
+    });
+
+    if (foundType) {
+      const paramStrings = foundType.value.match(JSDOC_PARAMS_REGEX);
+      const returns = (foundType.value.match(JSDOC_RETURNS_REGEX) || [])[1];
+
+      paramStrings.forEach((paramString) => {
+        const paramStringMatch = paramString.match(JSDOC_SINGLE_PARAM_REGEX);
+        const param = node.params.find((functionParam) => functionParam.name === paramStringMatch[2]);
+
+        if (param) {
+          param.tdType = new TDType(paramStringMatch[1]);
+        } else {
+          console.log('undocumented param:', paramString);
+        }
+      });
+      node.tdType = new TDType(returns);
+      node.id.tdType = new TDType(returns);
     }
   }
 
-  _assignTypeForExportDeclarationFromTypeDef(ast, typeDef) {
-    const foundStatement = ast
-      .filter((statement) => statement.type === 'ExportNamedDeclaration')
-      .map((exportNamedDeclaration) => exportNamedDeclaration.declaration.declarations || exportNamedDeclaration.declaration)
-      .reduce((a, b) => a.concat(b), [])
-      .find((variableDeclarator) => this._positionEqual(variableDeclarator.id.loc.end, typeDef.loc.start, { adjacent: true }));
+  _addJSDocTypeToClassMethod(node) {
+    const foundType = this._jsDocDefs.find((typeDef) => {
+      const commentEndLine = typeDef.loc.end.line;
+      const functionStartLine = node.loc.start.line;
 
-    if (foundStatement) {
-      foundStatement.id.tdType = typeDef.value.match(TYPEDEF_REGEX)[1];
+      return functionStartLine === commentEndLine + 1;
+    });
+
+    if (foundType) {
+      const paramStrings = foundType.value.match(JSDOC_PARAMS_REGEX);
+      const returns = (foundType.value.match(JSDOC_RETURNS_REGEX) || [])[1];
+
+      paramStrings.forEach((paramString) => {
+        const paramStringMatch = paramString.match(JSDOC_SINGLE_PARAM_REGEX);
+        const param = node.params.find((functionParam) => functionParam.name === paramStringMatch[2]);
+
+        if (param) {
+          param.tdType = new TDType(paramStringMatch[1]);
+        } else {
+          console.log('undocumented param:', paramString);
+        }
+      });
+      node.tdType = new TDType(returns);
+      node.tdType = new TDType(returns);
     }
   }
 
-  _assignTypeForParameterFromTypeDef(ast, typeDef) {
-    const foundParam = ast
-      .filter((statement) => {
-        return statement.type === 'FunctionDeclaration' ||
-          statement.type === 'MethodDefinition';
-      })
-      .map((declaration) => declaration.value || declaration)
-      .map((functionDeclaration) => functionDeclaration.params)
-      .reduce((a, b) => a.concat(b), [])
-      .find((paramIdentifier) => this._positionEqual(paramIdentifier.loc.end, typeDef.loc.start, { adjacent: true }));
+  _addTypeToImport(node) {
+    const imports = this._ast.imports;
+    const relevantImport = imports.find((anImport) => anImport.source === node.source);
 
-    if (foundParam) {
-      foundParam.tdType = typeDef.value.match(TYPEDEF_REGEX)[1];
+    // Add types to the new tree
+    const importTypeAdapter = new TDTypeAdapter(relevantImport.ast);
+    const importAst = importTypeAdapter.ast;
+  }
+
+  _addTypeToRequire(node) {
+    const importName = node.init.arguments[0] &&
+      node.init.arguments[0].value.replace(/^\.\//, '');
+    const imports = this._ast.imports;
+    const relevantImport = imports.find((anImport) => anImport.source === importName);
+
+    // Add types to the new tree
+    const importTypeAdapter = new TDTypeAdapter(relevantImport.ast);
+    const importAst = importTypeAdapter.ast;
+  }
+
+  _addTypeToDeclarator(node) {
+    const foundType = this._typeDefs.find((typeDef) => this._positionEqual(node.id.loc.end, typeDef.loc.start, { adjacent: true }));
+
+    node.id.tdType = foundType ? this._extractType(foundType.value, TYPEDEF_REGEX) : new TDType();
+    node.tdType = foundType ? this._extractType(foundType.value, TYPEDEF_REGEX) : new TDType;
+  }
+
+  _addTypeToParameter(node) {
+    const foundType = this._typeDefs.find((typeDef) => this._positionEqual(node.loc.end, typeDef.loc.start, { adjacent: true }));
+
+    node.tdType = foundType ? this._extractType(foundType.value, TYPEDEF_REGEX) : new TDType();
+  }
+
+  _addTypeToFunction(node, identifier) {
+    const foundType = this._typeDefs.find((typeDef) => {
+      const lastParam = node.params[node.params.length - 1];
+      const lastParamTypeString = lastParam &&
+        lastParam.tdType &&
+        lastParam.tdType.typeString ||
+        '';
+      const lastParamLoc = lastParam && lastParam.loc || identifier.loc;
+      const typeDefIsAfterParams = (typeDef.loc.start.line > lastParamLoc.end.line) ||
+        ((typeDef.loc.start.line === lastParamLoc.end.line) &&
+          (typeDef.loc.start.column > lastParamLoc.end.column + lastParamTypeString.length));
+      const typeDefIsBeforeBody = (typeDef.loc.end.line < node.body.loc.start.line) ||
+        ((typeDef.loc.end.line === node.body.loc.start.line) &&
+          (typeDef.loc.end.column < node.body.loc.start.column));
+      return typeDefIsAfterParams && typeDefIsBeforeBody;
+    });
+    const type = foundType ? this._extractType(foundType.value, TYPEDEF_REGEX) : new TDType();
+
+    node.tdType = type;
+    if (identifier) {
+      identifier.tdType = type;
     }
-  }
-
-  _assginTypeForClassMethodsFromTypeDef(ast, typeDef) {
-    ast
-      .filter((statement) => statement.type === 'MethodDefinition')
-      .forEach((methodDefinition) => {
-        const functionExpression = methodDefinition.value;
-        const lastParam = functionExpression.params[functionExpression.params.length - 1];
-        const lastParamTypeString = lastParam && lastParam.tdType || '';
-        const lastParamLoc = (lastParam && lastParam.loc) ||
-          (methodDefinition.key && methodDefinition.key.loc);
-        const typeDefIsAfterParams = (typeDef.loc.start.row > lastParamLoc.end.row) ||
-          ((typeDef.loc.start.row === lastParamLoc.end.row) &&
-           (typeDef.loc.start.column > lastParamLoc.end.column + lastParamTypeString.length));
-        const typeDefIsBeforeBody = (typeDef.loc.end.row < functionExpression.body.loc.start.row) ||
-          ((typeDef.loc.end.row === functionExpression.body.loc.start.row) &&
-           (typeDef.loc.end.column < functionExpression.body.loc.start.column));
-
-        if (typeDefIsAfterParams &&
-            typeDefIsBeforeBody) {
-          methodDefinition.tdType = typeDef.value.match(TYPEDEF_REGEX)[1];
-          methodDefinition.key.tdType = typeDef.value.match(TYPEDEF_REGEX)[1];
-        }
-      });
-  }
-
-  _assignTypeForFunctionFromTypeDef(ast, typeDef) {
-    ast
-      .filter((statement) => statement.type === 'FunctionDeclaration')
-      .forEach((functionDeclaration) => {
-        const lastParam = functionDeclaration.params[functionDeclaration.params.length - 1];
-        const lastParamTypeString = lastParam && lastParam.tdType || '';
-        const lastParamLoc = lastParam && lastParam.loc || functionDeclaration.id.loc;
-        const typeDefIsAfterParams = (typeDef.loc.start.row > lastParamLoc.end.row) ||
-          ((typeDef.loc.start.row === lastParamLoc.end.row) &&
-           (typeDef.loc.start.column > lastParamLoc.end.column + lastParamTypeString.length));
-        const typeDefIsBeforeBody = (typeDef.loc.end.row < functionDeclaration.body.loc.start.row) ||
-          ((typeDef.loc.end.row === functionDeclaration.body.loc.start.row) &&
-           (typeDef.loc.end.column < functionDeclaration.body.loc.start.column));
-
-        if (typeDefIsAfterParams &&
-            typeDefIsBeforeBody) {
-          functionDeclaration.tdType = typeDef.value.match(TYPEDEF_REGEX)[1];
-          functionDeclaration.id.tdType = typeDef.value.match(TYPEDEF_REGEX)[1];
-        }
-      });
-  }
-
-  _assignTypeForClassMethodsFromJSDoc(ast, typeDef) {
-    ast
-      .filter((statement) => statement.type === 'MethodDefinition')
-      .forEach((methodDefinition) => {
-        const functionExpression = methodDefinition.value;
-        const commentEndLine = typeDef.loc.end.line;
-        const functionStartLine = functionExpression.loc.start.line;
-
-        if (functionStartLine === commentEndLine + 1) {
-          const paramStrings = typeDef.value.match(JSDOC_PARAMS_REGEX);
-          const returns = (typeDef.value.match(JSDOC_RETURNS_REGEX) || [])[1];
-
-          paramStrings.forEach((paramString) => {
-            const paramStringMatch = paramString.match(JSDOC_SINGLE_PARAM_REGEX);
-            const param = functionExpression.params.find((functionParam) => functionParam.name === paramStringMatch[2]);
-
-            if (param) {
-              param.tdType = paramStringMatch[1];
-            } else {
-              console.log('undocumented param:', paramString);
-            }
-          });
-          functionExpression.tdType = returns;
-        }
-      });
-  }
-
-  _assignTypeForFunctionFromJSDoc(ast, typeDef) {
-    ast
-      .filter((statement) => statement.type === 'FunctionDeclaration')
-      .forEach((functionDeclaration) => {
-        const commentEndLine = typeDef.loc.end.line;
-        const functionStartLine = functionDeclaration.loc.start.line;
-
-        if (functionStartLine === commentEndLine + 1) {
-          const paramStrings = typeDef.value.match(JSDOC_PARAMS_REGEX);
-          const returns = (typeDef.value.match(JSDOC_RETURNS_REGEX) || [])[1];
-
-          paramStrings.forEach((paramString) => {
-            const paramStringMatch = paramString.match(JSDOC_SINGLE_PARAM_REGEX);
-            const param = functionDeclaration.params.find((functionParam) => functionParam.name === paramStringMatch[2]);
-
-            if (param) {
-              param.tdType = paramStringMatch[1];
-            } else {
-              console.log('undocumented param:', paramString);
-            }
-          });
-          functionDeclaration.tdType = returns;
-          functionDeclaration.id.tdType = returns;
-        }
-      });
   }
 
   _findTypeDefComments(ast) {
@@ -204,6 +228,10 @@ export class TDTypeAdapter {
 
         return params || returns;
       });
+  }
+
+  _extractType(inputString, regex, index=1) {
+    return new TDType((inputString.match(regex)[index] || '').trim());
   }
 
   _positionEqual(pos1, pos2, options) {

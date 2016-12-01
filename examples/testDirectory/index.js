@@ -1,1 +1,1 @@
-export var s /* t:string */ = 'asdf';
+export var s /* t:String */ = 'asdf';

@@ -27,6 +27,7 @@ export class TDFunctionalChecker {
     tdTypeAdapter = new TDTypeAdapter(ast);
     ast = tdTypeAdapter.ast;
     this._ast = ast;
+    new TDScopeGenerator(ast).generate();
 
     return this._check(ast);
   }
@@ -40,7 +41,6 @@ export class TDFunctionalChecker {
       let scope;
 
       errors = errors.concat(this._checkImports(body, ast));
-      scope = TDScopeGenerator.generate(ast, parentScope);
 
       errors = errors.concat(this._checkChildScopes(body, ast));
       errors = errors.concat(this._checkAssignments(body, ast));
@@ -116,7 +116,7 @@ export class TDFunctionalChecker {
     const hasCallee = statement.callee && statement.callee.object;
     const calleeDeclaration = hasCallee && statement.scope.findDeclarationForName(statement.callee.object && statement.callee.object.name);
     const isCalleeTyped = calleeDeclaration && calleeDeclaration.type;
-    const isCalleeArray = isCalleeTyped && calleeDeclaration.type.match(/.*\[\]$/);
+    const isCalleeArray = isCalleeTyped && calleeDeclaration.type.typeString.match(/.*\[\]$/);
     const isInCurrentScope = calleeDeclaration && statement.scope.findDeclarationForName(statement.callee.object.name, true);
     const disallowedArrayMethods = [
       'push',

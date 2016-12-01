@@ -1,3 +1,3 @@
-const n = require('./requireDeclaration.test');
+const test = require('./badDeclaration.test');
 
-const s /* t:string */ = n;
+var s /* t:String */ = test

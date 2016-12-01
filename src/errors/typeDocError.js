@@ -3,7 +3,7 @@
 import chalk from 'chalk';
 
 export class TypeDocError {
-  constructor(message /* t:string */, extras /* t:any */) {
+  constructor(message /* t:String */, extras /* t:any */) {
     this.name = 'GenericError';
     this.message = message;
     this.extras = extras;

@@ -33,42 +33,42 @@ const test = require('./test');
     const readFileSyncStub = sandbox.stub(fs, 'readFileSync', (file) => {
       return {
         './test': `
-const test /* t:number */ = 2;
+const test /* t:Number */ = 2;
 
 module.exports = test;`,
         './main': `
 const test = require('./test');
 
-var s /* t:string */ = test
+var s /* t:String */ = test
 `
       }[file];
     });
 
     const errors = new TDTypeChecker('./main').run();
 
-    expect(errors[0].extras.expectedType).to.equal('string');
-    expect(errors[0].extras.actualType).to.equal('number');
+    expect(errors[0].extras.expectedType).to.equal('String');
+    expect(errors[0].extras.actualType).to.equal('Number');
   });
 
   it('should run tests on the imported files', () => {
     const readFileSyncStub = sandbox.stub(fs, 'readFileSync', (file) => {
       return {
         './test': `
-let aNumber /* t:number */ = 3;
-const test /* t:string */ = aNumber;
+let aNumber /* t:Number */ = 3;
+const test /* t:String */ = aNumber;
 module.exports = test;
 `,
         './main': `
 const test = require('./test');
 
-var s /* t:string */ = test
+var s /* t:String */ = test
 `
       }[file];
     });
 
     const errors = new TDTypeChecker('./main').run();
 
-    expect(errors[0].extras.expectedType).to.equal('string');
-    expect(errors[0].extras.actualType).to.equal('number');
+    expect(errors[0].extras.expectedType).to.equal('String');
+    expect(errors[0].extras.actualType).to.equal('Number');
   });
 });

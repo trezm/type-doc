@@ -3,7 +3,7 @@ import { parser } from '../../parser';
 import { typeChecker } from '../../typeChecker';
 import { File } from './file';
 
-export function readFile(fileName /* t:string */) /* t:{ ast: ast, errors: [TypeDocError] } */ {
+export function readFile(fileName /* t:String */) /* t:{ ast: ast, errors: [TypeDocError] } */ {
   const fileContents = readFileSync(fileName);
   const statements = parser.parse(fileContents);
   let currentDirectory = fileName.split('/');

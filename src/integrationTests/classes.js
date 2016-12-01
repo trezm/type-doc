@@ -8,11 +8,11 @@ describe('classes', () => {
 class TestClass {
   constructor() {}
 
-  aGoodMethod1(s /* t:string */) /* t:string */ {
+  aGoodMethod1(s /* t:String */) /* t:String */ {
     return s;
   }
 
-  aGoodMethod2(s /* t:string */) /* t:string */ {
+  aGoodMethod2(s /* t:String */) /* t:String */ {
     return this.aGoodMethod1(s);
   }
 }
@@ -26,18 +26,18 @@ class TestClass {
 class TestClass {
   constructor() {}
 
-  aFineMethod(s /* t:string */) /* t:string */ {
+  aBadMethod(s /* t:String */) /* t:String */ {
     return s;
   }
 
-  toNumber(s /* t:string */) /* t:number */ {
+  toNumber(s /* t:String */) /* t:Number */ {
     return this.aBadMethod(s);
   }
 }
 `).run();
 
-    expect(errors[0].extras.expectedType).to.equal('number');
-    expect(errors[0].extras.actualType).to.equal('string');
+    expect(errors[0].extras.expectedType).to.equal('Number');
+    expect(errors[0].extras.actualType).to.equal('String');
   });
 
   it('should check method argument types', () => {
@@ -45,17 +45,17 @@ class TestClass {
 class TestClass {
   constructor() {}
 
-  aFineMethod(s /* t:string */) /* t:string */ {
+  aFineMethod(s /* t:String */) /* t:String */ {
     return s;
   }
 
-  toNumber(n /* t:number */) /* t:number */ {
-    this.aBadMethod(n);
+  toNumber(n /* t:Number */) /* t:Number */ {
+    this.aFineMethod(n);
   }
 }
 `).run();
 
-    expect(errors[0].extras.expectedType).to.equal('number');
-    expect(errors[0].extras.actualType).to.equal('string');
+    expect(errors[0].extras.expectedType).to.equal('String');
+    expect(errors[0].extras.actualType).to.equal('Number');
   });
 });

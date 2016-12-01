@@ -1,1 +1,2 @@
-export const test /* t:number */ = 2;
+let aNumber /* t:Number */ = 3;
+export const test /* t:String */ = aNumber;

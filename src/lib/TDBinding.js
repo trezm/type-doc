@@ -12,7 +12,7 @@ export class TDBinding {
     this.methodDeclarations.push(variableDeclaration);
   }
 
-  findDeclarationForName(name /* t:string */) /* t:TDDeclaration */ {
+  findDeclarationForName(name /* t:String */) /* t:TDDeclaration */ {
     return this.methodDeclarations.concat(this.variableDeclarations)
       .find((methodDeclaration) => methodDeclaration.name === name);
   }

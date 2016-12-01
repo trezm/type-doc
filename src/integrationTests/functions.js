@@ -3,14 +3,14 @@ import { expect } from 'chai';
 import { TDTypeChecker } from '../lib/TDTypeChecker';
 
 describe('functions', () => {
-  describe('functions should test return values of arguments', () => {
+  describe('should test return values of arguments', () => {
     it('should allow arguments and not throw errors', () => {
       const errors = new TDTypeChecker(`
-function add(x /* t:number */, y /* t:number */) /* t:number */ {
+function add(x /* t:Number */, y /* t:Number */) /* t:Number */ {
   return x + y;
 }
 
-function subtract(x /* t:number */, y /* t:number */) /* t:number */ {
+function subtract(x /* t:Number */, y /* t:Number */) /* t:Number */ {
   return x - y;
 }`).run();
 
@@ -20,26 +20,26 @@ function subtract(x /* t:number */, y /* t:number */) /* t:number */ {
 
     it('should throw errors if arguments are returned and the type is wrong', () => {
       const errors = new TDTypeChecker(`
-function multiply(x /* t:number */, y /* t:number */) /* t:string */ {
+function multiply(x /* t:Number */, y /* t:Number */) /* t:String */ {
   return x * y;
 }`).run();
 
       expect(errors).to.exist;
       expect(errors.length).to.equal(1);
-      expect(errors[0].extras.expectedType).to.equal('string');
-      expect(errors[0].extras.actualType).to.equal('number');
+      expect(errors[0].extras.expectedType).to.equal('String');
+      expect(errors[0].extras.actualType).to.equal('Number');
     });
   });
 
-  describe('function calls', () => {
+  describe('calls', () => {
     it('should allow function calls as returns', () => {
       const errors = new TDTypeChecker(`
-function add(x /* t:number */, y /* t:number */) /* t:number */ {
+function add(x /* t:Number */, y /* t:Number */) /* t:Number */ {
   return x + y;
 }
 
-function addTwo(x /* t:number */) /* t:number */ {
-  var two /* t:number */ = 2;
+function addTwo(x /* t:Number */) /* t:Number */ {
+  var two /* t:Number */ = 2;
 
   return add(x, two);
 }`).run();
@@ -50,26 +50,26 @@ function addTwo(x /* t:number */) /* t:number */ {
 
     it('should check the return type of the function', () => {
       const errors = new TDTypeChecker(`
-function subtract(x /* t:number */, y /* t:number */) /* t:number */ {
+function subtract(x /* t:Number */, y /* t:Number */) /* t:Number */ {
   return x - y;
 }
 
-function subtractTwo(x /* t:number */) /* t:string */ {
+function subtractTwo(x /* t:Number */) /* t:String */ {
   return subtract(x, 2);
 }`).run();
 
       expect(errors).to.exist;
       expect(errors.length).to.equal(1);
-      expect(errors[0].extras.expectedType).to.equal('string');
-      expect(errors[0].extras.actualType).to.equal('number');
+      expect(errors[0].extras.expectedType).to.equal('String');
+      expect(errors[0].extras.actualType).to.equal('Number');
     });
 
     it('should check the argument types', () => {
       const errors = new TDTypeChecker(`
-const s /* t:string */ = 'some string';
-const n /* t:number */ = 1;
+const s /* t:String */ = 'some string';
+const n /* t:Number */ = 1;
 
-function subtract(x /* t:number */, y /* t:number */) /* t:number */ {
+function subtract(x /* t:Number */, y /* t:Number */) /* t:Number */ {
   return x - y;
 }
 
@@ -78,17 +78,64 @@ subtract(n, s);
 
       expect(errors).to.exist;
       expect(errors.length).to.equal(1);
-      expect(errors[0].extras.expectedType).to.equal('number');
-      expect(errors[0].extras.actualType).to.equal('string');
+      expect(errors[0].extras.expectedType).to.equal('Number');
+      expect(errors[0].extras.actualType).to.equal('String');
+    });
+
+    it('should check return types of called functions as arguments', () => {
+      const errors = new TDTypeChecker(`
+function zero() /* t:String */ {
+  return '0';
+}
+
+function addOne(x /* t:Number */) /* t:Number */ {
+  return x + 1;
+}
+
+addOne(zero());
+`).run();
+
+      expect(errors).to.exist;
+      expect(errors.length).to.equal(1);
+      expect(errors[0].extras.expectedType).to.equal('Number');
+      expect(errors[0].extras.actualType).to.equal('String');
+    });
+
+    it('should allow inline functions', () => {
+      const errors = new TDTypeChecker(`
+function addOne(x /* t:String */, stringToNumber /* t:String -> Number */) /* t:Number */ {
+  return stringToNumber(x) + 1;
+}
+
+addOne('0', (aString /* t:String */) => Number(aString));
+`).run();
+
+      expect(errors).to.exist;
+      expect(errors.length).to.equal(0);
+    });
+
+    it('should check inline function return types', () => {
+      const errors = new TDTypeChecker(`
+function addOne(x /* t:String */, stringToNumber /* t:String -> Number */) /* t:Number */ {
+  return stringToNumber(x) + 1;
+}
+
+addOne('0', (aString /* t:String */) => aString);
+`).run();
+
+      expect(errors).to.exist;
+      expect(errors.length).to.equal(1);
+      expect(errors[0].extras.expectedType).to.equal('String -> Number');
+      expect(errors[0].extras.actualType).to.equal('String -> String');
     });
   });
 
-  describe('functions in functions should still respect types', () => {
+  describe('in functions should still respect types', () => {
     it('should allow functions in functions', () => {
       const errors = new TDTypeChecker(`                  // 1
-function a(x /* t:string */) /* t:string */ {       // 2
-  function b(y /* t:string */) /* t:string */ {     // 3
-    function c(z /* t:string */) /* t:string */ {   // 4
+function a(x /* t:String */) /* t:String */ {       // 2
+  function b(y /* t:String */) /* t:String */ {     // 3
+    function c(z /* t:String */) /* t:String */ {   // 4
       return y + x + z;                             // 5
     }                                               // 6
                                                     // 7
@@ -104,9 +151,9 @@ function a(x /* t:string */) /* t:string */ {       // 2
 
     it('should identify type errors from functions in functions declared in parent scopes', () => {
       const errors = new TDTypeChecker(`
-function d(x /* t:string */) /* t:string */ {
-  function e(y /* t:string */) /* t:string */ {
-    function f(z /* t:string */) /* t:number */ {
+function d(x /* t:String */) /* t:String */ {
+  function e(y /* t:String */) /* t:String */ {
+    function f(z /* t:String */) /* t:Number */ {
       return y + x + z;
     }
 
@@ -118,10 +165,10 @@ function d(x /* t:string */) /* t:string */ {
 
       expect(errors).to.exist;
       expect(errors.length).to.equal(2);
-      expect(errors[0].extras.expectedType).to.equal('number');
-      expect(errors[0].extras.actualType).to.equal('string');
-      expect(errors[1].extras.expectedType).to.equal('string');
-      expect(errors[1].extras.actualType).to.equal('number');
+      expect(errors[0].extras.expectedType).to.equal('Number');
+      expect(errors[0].extras.actualType).to.equal('String');
+      expect(errors[1].extras.expectedType).to.equal('String');
+      expect(errors[1].extras.actualType).to.equal('Number');
     });
   });
 });

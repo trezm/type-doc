@@ -1,3 +1,3 @@
-const n /* t:number */ = 1;
+const n /* t:Number */ = 1;
 
 module.exports = n;
