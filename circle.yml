@@ -1,6 +1,5 @@
 test:
   pre:
     - gulp build:dev
-    - ./bin/build-parser.sh
   override:
-    - gulp test
+    - npm test

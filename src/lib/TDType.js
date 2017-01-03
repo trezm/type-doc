@@ -1,6 +1,6 @@
 'use strict';
 
-import { v4 } from 'uuid';
+import { v4 } from 'node-uuid';
 
 export class TDType {
   constructor(typeString='any' /* t:String */) {
