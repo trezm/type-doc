@@ -83,7 +83,7 @@ export const grammar = {
     ],
     constant: [
       ['STRING', '$$ = {name: "constant", type: "string", val: $1.replace(/(^.)?(.$)?/g, ""), line: yylineno}'],
-      ['NUMBER', '$$ = {name: "constant", type: "number", val: $1, line: yylineno}']
+      ['NUMBER', '$$ = {name: "constant", type: "Number", val: $1, line: yylineno}']
     ],
     expr: [
       ['WORD', '$$ = $1'],

@@ -4,7 +4,12 @@ import { resolve } from 'path';
 import { TDASTGenerator } from './TDASTGenerator';
 import { TDScopeGenerator } from './TDScopeGenerator';
 import { TDTypeAdapter } from './TDTypeAdapter';
+import { TDType } from './TDType';
 import { TypeMismatchError } from '../errors';
+
+String.prototype.capitalize = function() {
+  return this.charAt(0).toUpperCase() + this.slice(1);
+};
 
 export class TDTypeChecker {
   constructor(file, ast) {
@@ -15,7 +20,6 @@ export class TDTypeChecker {
   run() {
     let ast = this._ast;
     let tdTypeAdapter;
-    let scope;
 
     if (!ast) {
       const tdAstGenerator = new TDASTGenerator(this._file);
@@ -27,30 +31,250 @@ export class TDTypeChecker {
     tdTypeAdapter = new TDTypeAdapter(ast);
     ast = tdTypeAdapter.ast;
     this._ast = ast;
+    new TDScopeGenerator(ast).generate();
 
-    return this._checkTypes(ast);
+    const importErrors = ast
+      .imports
+      .map((importedTree) => this._checkNode(importedTree.ast))
+      .reduce((a, b) => a.concat(b), []);
+
+    let newErrors = importErrors.concat(this._checkNode(ast, []));
+
+    return newErrors;
   }
 
-  _checkTypes(ast, parentScope) {
-    let body = ast && ast.body;
-    body = body.body || body;
+  _checkNode(node, errors=[]) {
+    switch (node.type) {
+      case 'MethodDefinition': {
+        return errors.concat(this._checkNode(node.value));
+      }
+      case 'Program':
+        return errors.concat(
+          node
+            .body
+            .map((declarator) => this._checkNode(declarator))
+            .reduce((a, b) => a.concat(b), []));
+      case 'BlockStatement': {
+        return errors.concat(
+          node
+            .body
+            .map((statement) => this._checkNode(statement))
+            .reduce((a, b) => a.concat(b), []));
+      }
+      case 'ClassDeclaration': {
+        return errors.concat(
+          node
+            .body
+            .body
+            .map((statement) => this._checkNode(statement))
+            .reduce((a, b) => a.concat(b), []));
+      }
+      case 'FunctionExpression': {
+        errors = errors.concat(this._checkNode(node.body));
+        errors = errors.concat(this._checkFunctionReturnType(node));
 
-    if (body) {
-      let errors = [];
-      let scope;
+        return errors;
+      }
+      case 'ArrowFunctionExpression': {
+        errors = errors.concat(this._checkNode(node.body && node.body.body || [node.body]));
 
-      errors = errors.concat(this._checkImports(body, ast));
-      scope = TDScopeGenerator.generate(ast, parentScope);
+        return errors;
+      }
+      case 'FunctionDeclaration': {
+        errors = errors.concat(this._checkNode(node.body));
+        errors = errors.concat(this._checkFunctionReturnType(node));
 
-      errors = errors.concat(this._checkChildScopes(body, ast));
-      errors = errors.concat(this._checkDeclarations(body, ast));
-      errors = errors.concat(this._checkAssignments(body, ast));
-      errors = errors.concat(this._checkReturns(body, ast));
-      errors = errors.concat(this._checkCalls(body, ast));
+        return errors;
+      }
+      case 'ExportNamedDeclaration': {
+        return errors.concat(this._checkNode(node.declaration));
+      }
+      case 'ImportDeclaration': {
+        return errors;
+      }
+      case 'ImportSpecifier': {
+        // console.log('node:', node);
+        return errors;
+      }
+      case 'VariableDeclaration': {
+        return errors.concat(
+          node
+            .declarations
+            .map((declarator) => this._checkNode(declarator))
+            .reduce((a, b) => a.concat(b), []));
+      }
+      case 'VariableDeclarator': {
+        if (node.init &&
+          node.init.callee &&
+          node.init.callee.name === 'require') {
 
-      return errors;
+        } else if (node.init) {
+          errors = errors.concat(this._checkNode(node.init));
+        }
+
+        return errors.concat(this._checkDeclaratorInitType(node));
+      }
+      case 'ReturnStatement': {
+        // Fix this up -- we're hitting issues checking for calls of arguments
+        // that are functions called in the return statement.
+        // errors = errors.concat(this._checkNode(node.argument));
+
+        return errors;
+      }
+      case 'BinaryExpression': {
+        errors = errors.concat(this._checkNode(node.left));
+        errors = errors.concat(this._checkNode(node.right));
+
+        return errors;
+      }
+      case 'ExpressionStatement': {
+        return errors.concat(this._checkNode(node.expression));
+      }
+      case 'AssignmentExpression': {
+        errors = errors.concat(this._checkNode(node.left));
+        errors = errors.concat(this._checkNode(node.right));
+
+        return errors.concat(this._checkAssignmentExpressionTypes(node));
+      }
+      case 'CallExpression': {
+        errors = errors.concat(this._checkCallArgumentTypes(node));
+
+        return errors.concat(
+          node
+            .arguments
+            .map((argument) => this._checkNode(argument))
+            .reduce((a, b) => a.concat(b), []));
+      }
+      default:
+        // console.log('unidentified node:', node.type);
+        return errors;
     }
   }
+
+/**
+ * New check methods
+ */
+  _checkDeclaratorInitType(node, errors=[]) {
+    if (!node.id || !node.init) {
+      return errors;
+    }
+
+    node.id.scope = node.scope;
+    node.init.scope = node.scope;
+
+    let declaratorType;
+    let assignmentType;
+
+    if (node.init &&
+      node.init.callee &&
+      node.init.callee.name === 'require') {
+      let assignmentDeclaration = node.scope.findDeclarationForName(node.id.name);
+      declaratorType = this._findTypeForNode(node.id);
+      assignmentType = (assignmentDeclaration && assignmentDeclaration.tdType) || TDType.any();
+    } else {
+      declaratorType = this._findTypeForNode(node.id);
+      assignmentType = this._findTypeForNode(node.init);
+    }
+
+    const error = this._testTypes(declaratorType, assignmentType, node.loc.start.line);
+
+    return (error && errors.concat([error])) || errors;
+  }
+
+  _checkAssignmentExpressionTypes(node, errors=[]) {
+    node.left.scope = node.scope;
+    node.right.scope = node.scope;
+
+    const declaratorType = this._findTypeForNode(node.left);
+    const assignmentType = this._findTypeForNode(node.right);
+
+    const error = this._testTypes(declaratorType, assignmentType, node.loc.start.line)
+
+    return (error && errors.concat([error])) || errors;
+  }
+
+  _checkFunctionReturnType(node, errors=[]) {
+    const functionReturnType = node.tdType;
+    const bodyReturnType = this._findReturnType(node.body);
+
+    const error = this._testTypes(functionReturnType, bodyReturnType, node.loc.start.line);
+
+    return (error && errors.concat([error])) || errors;
+  }
+
+  _checkCallArgumentTypes(node, errors=[]) {
+    const scope = node.scope;
+    const isThisExpression = node.callee.object &&
+      node.callee.object.type === 'ThisExpression';
+    const name = node.callee.name ||
+      (isThisExpression && node.callee.property.name);
+    const functionDeclaration = isThisExpression ?
+      scope.findDeclarationForStaticMember(node.callee) :
+      scope.findDeclarationForName(name);
+
+    const genericTypes = {};
+
+    return functionDeclaration && node.arguments.map((argument, index) => {
+      const argumentDeclarationType = this._findTypeForNode(argument, argument.scope || scope);
+      const param = functionDeclaration.params[index];
+      const paramType = param.type;
+      let genericsErrors = [];
+
+      /* Assign any types to generics */
+      if (paramType.typeList.length !== argumentDeclarationType.typeList.length) {
+        // Throw an error
+      }
+
+      paramType
+        .typeList
+        .forEach((typeString, index) => {
+          debugger;
+          if (genericTypes[typeString] && argumentDeclarationType.isGeneric) {
+            genericTypes[argumentDeclarationType.typeList[index]] = typeString;
+          } else if (genericTypes[typeString] &&
+            genericTypes[typeString] !== argumentDeclarationType.typeList[index]) {
+            genericsErrors = genericsErrors.concat([
+              new TypeMismatchError(`Generic type '${typeString}' is inconsistent at line ${node.loc.start.line}`, {
+                type1: genericTypes[typeString],
+                type2: argumentDeclarationType.typeList[index]
+              })
+            ]);
+          } else if (TDType.testForGeneric(typeString)) {
+            genericTypes[typeString] = argumentDeclarationType.typeList[index];
+          }
+        });
+
+      // Do we need to wrap TDType here...
+      // return new TDType(this._followGenericChain(genericTypes, returnType) || returnType || TDType.any());
+      if (genericsErrors.length) {
+        return genericsErrors;
+      }
+
+      if (paramType.isGeneric) {
+        genericTypes[paramType.typeString] = argumentDeclarationType.typeString;
+      }
+
+      return this._testTypes(paramType, argumentDeclarationType, node.loc.start.line);
+    })
+    .reduce((a, b) => a.concat(b), [])
+    .filter((a) => Boolean(a));
+  }
+
+  /**
+   * New helper methods
+   */
+
+  _findReturnType(node, errors=[]) {
+    let returnStatement = node
+      .body
+      .find((statement) => statement.type === 'ReturnStatement');
+
+    return (returnStatement && this._findTypeForNode(returnStatement)) || TDType.any();
+  }
+
+/**
+ * Legacy check methods
+ */
 
   _checkChildScopes(statements, parent) {
     return statements.filter((statement) => Boolean(statement.body || (statement.value && statement.value.body)))
@@ -65,122 +289,12 @@ export class TDTypeChecker {
       .reduce((a, b) => a.concat(b), []);
   }
 
-  _checkDeclarations(statements, ast) {
-    return statements.filter((statement) => {
-        return statement.type === 'VariableDeclaration' ||
-          statement.type === 'ExportNamedDeclaration';
-      })
-      .map((declaration) => {
-        if (declaration.type === 'ExportNamedDeclaration') {
-          declaration.declaration.scope = declaration.scope;
-          return declaration.declaration;
-        } else {
-          return declaration;
-        }
-      })
-      .map((variableDeclaration) => {
-        const declarations = (variableDeclaration.declarations || [variableDeclaration]);
 
-        declarations.forEach((declaration) => declaration.scope = variableDeclaration.scope);
-        return declarations;
-      })
-      .reduce((a, b) => a.concat(b), [])
-      .filter((variableDeclarator) => Boolean(variableDeclarator.init))
-      .map((variableDeclarator) => {
-        variableDeclarator.id.scope = variableDeclarator.scope;
-        variableDeclarator.init.scope = variableDeclarator.scope;
-
-        const declaratorType = this._findTypeForNode(variableDeclarator.id);
-        const assignmentType = this._findTypeForNode(variableDeclarator.init);
-        const assignmentErrors = this._checkCalls([variableDeclarator.init]);
-
-        return assignmentErrors.concat([this._testTypes(declaratorType, assignmentType, variableDeclarator.loc.start.line)]);
-      })
-      .reduce((a, b) => a.concat(b), [])
-      .filter((errors) => Boolean(errors));
-  }
-
-  _checkAssignments(statements) {
-    return statements.filter((statement) => {
-        return statement.type === 'ExpressionStatement' &&
-          statement.expression.type === 'AssignmentExpression';
-      })
-      .map((expressionStatement) => {
-        expressionStatement.expression.scope = expressionStatement.scope;
-        return expressionStatement.expression;
-      })
-      .map((assignmentExpression) => {
-        assignmentExpression.left.scope = assignmentExpression.scope;
-        assignmentExpression.right.scope = assignmentExpression.scope;
-
-        const declaratorType = this._findTypeForNode(assignmentExpression.left);
-        const assignmentType = this._findTypeForNode(assignmentExpression.right);
-        const assignmentErrors = this._checkCalls([assignmentExpression.right]);
-
-        return assignmentErrors.concat([this._testTypes(declaratorType, assignmentType, assignmentExpression.loc.start.line)]);
-      })
-      .reduce((a, b) => a.concat(b), [])
-      .filter((errors) => Boolean(errors));
-  }
-
-  _checkReturns(statements) {
-    return statements
-      .filter((statement) => {
-        return statement.type === 'FunctionDeclaration' ||
-          statement.type === 'MethodDefinition';
-      })
-      .map((declaration) => {
-        return (declaration.value || declaration).body.body
-          .filter((statement) => statement.type === 'ReturnStatement')
-          .map((returnStatement) => {
-            const returnType = this._findTypeForNode(returnStatement);
-
-            return this._testTypes(declaration.value && declaration.value.tdType || declaration.tdType, returnType, returnStatement.loc.start.line);
-          });
-      })
-      .reduce((a, b) => a.concat(b), [])
-      .filter((errors) => Boolean(errors));
-  }
-
-  _checkCalls(statements) {
-    return statements
-      .filter((statement) => {
-        const isExpressionStatement = statement.type === 'ExpressionStatement' &&
-          statement.expression.type === 'CallExpression';
-        const isAssignment = statement.type === 'CallExpression';
-
-        return isExpressionStatement || isAssignment;
-      })
-      .map((statement) => {
-        const scope = statement.scope;
-        const callExpression = statement.expression || statement;
-        const name = callExpression.callee.name;
-        const functionDeclaration = scope.findDeclarationForName(name);
-
-        return functionDeclaration && callExpression.arguments.map((argument, index) => {
-          const argumentDeclarationType = this._findTypeForNode(argument, scope);
-          const param = functionDeclaration.params[index];
-          const paramType = param.type;
-
-          return this._testTypes(paramType, argumentDeclarationType, callExpression.loc.start.line);
-        });
-      })
-      .reduce((a, b) => a.concat(b), [])
-      .filter((errors) => Boolean(errors));
-  }
-
-  _testTypes(expectedType, actualType, lineNumber) {
-    const checkExpectedType = typeof expectedType !== 'undefined' &&
-      expectedType !== 'any';
-    const checkActualType = typeof actualType !== 'undefined' &&
-      actualType !== 'any';
-
-    if (checkExpectedType &&
-        checkActualType &&
-        expectedType !== actualType) {
+  _testTypes(expectedType=TDType.any() /* t:TDType */, actualType=TDType.any() /* t:TDType */, lineNumber /* t:Number */) /* t:TypeMismatchError? */ {
+    if (expectedType.equals(actualType)) {
       return new TypeMismatchError(`Type mismatch in declaration on line ${lineNumber}`, {
-        actualType: actualType,
-        expectedType: expectedType,
+        actualType: actualType.typeString,
+        expectedType: expectedType.typeString,
         file: this._ast.file
       });
     }
@@ -248,23 +362,33 @@ export class TDTypeChecker {
 
   _findTypeForNode(node, scope=node.scope) {
     let tdDeclaration;
+    let signature;
+    let returnType;
+    let genericTypes = {};
 
     if (!node) {
       return;
     }
 
     switch (node.type) {
+      case 'ArrowFunctionExpression':
+        node.body.scope = scope;
+        let arrowFunctionReturn = this._findTypeForNode(node.body);
+
+        return new TDType(node.params
+          .map((param) => (param.tdType || TDType.any()).typeString)
+          .join(' -> ') + ' -> ' + arrowFunctionReturn.typeString);
       case 'Literal':
-        return typeof node.value;
+        return new TDType((typeof node.value).capitalize());
       case 'Identifier':
         tdDeclaration = scope.findDeclarationForName(node.name);
-        return tdDeclaration && tdDeclaration.type || 'any';
+        return tdDeclaration && tdDeclaration.type || TDType.any();
       case 'BinaryExpression':
         node.left.scope = scope;
         node.right.scope = scope;
         return this._findTypeForExpression(node);
       case 'NewExpression':
-        return node.callee.name;
+        return new TDType(node.callee.name);
       case 'CallExpression':
         if (node.callee.type === 'MemberExpression') {
           tdDeclaration = scope.findDeclarationForStaticMember(node.callee);
@@ -272,13 +396,51 @@ export class TDTypeChecker {
           tdDeclaration = scope.findDeclarationForName(node.callee.name);
         }
 
-        return tdDeclaration && tdDeclaration.type || 'any';
+        signature = tdDeclaration &&
+          tdDeclaration.type  &&
+          tdDeclaration.type.typeString.split(' -> ');
+        returnType = signature && signature.pop();
+
+        tdDeclaration && tdDeclaration.params && node.arguments.forEach((argument, index) => {
+          const argumentDeclarationType = new TDType(this._findTypeForNode(argument, argument.scope || scope));
+          const param = tdDeclaration.params[index];
+          const paramType = param.type;
+
+          paramType
+            .typeList
+            .forEach((typeString, index) => {
+              if (genericTypes[typeString] && argumentDeclarationType.isGeneric) {
+                genericTypes[argumentDeclarationType.typeList[index]] = typeString;
+              } else if (genericTypes[typeString] &&
+                genericTypes[typeString] !== argumentDeclarationType.typeList[index]) {
+                throw new TypeMismatchError(`Generic type '${typeString}' is inconsistent at line ${node.loc.start.line}`, {
+                  type1: genericTypes[typeString],
+                  type2: argumentDeclarationType.typeList[index]
+                });
+              } else if (TDType.testForGeneric(typeString)) {
+                genericTypes[typeString] = argumentDeclarationType.typeList[index];
+              }
+            });
+        });
+
+        // Do we need to wrap TDType here...
+        return new TDType(this._followGenericChain(genericTypes, returnType) || returnType || TDType.any());
       case 'ReturnStatement':
         node.argument.scope = scope;
         return this._findTypeForNode(node.argument);
       default:
         return;
     }
+  }
+
+  _followGenericChain(generics, type) {
+    const genericValue = generics[type];
+
+    if (!genericValue) {
+      return;
+    }
+
+    return this._followGenericChain(generics, genericValue) || genericValue;
   }
 
   _findTypeForExpression(expression) {

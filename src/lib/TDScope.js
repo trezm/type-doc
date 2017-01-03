@@ -2,11 +2,16 @@
 
 import { TDBinding } from './TDBinding';
 import { TDDeclaration } from './TDDeclaration';
+import { TDBuiltinDeclarations } from './TDBuiltinDeclarations';
 
 export class TDScope {
   constructor(parent /* t:TDScope */) {
     this.parent = parent;
     this.declarations = [];
+
+    if (!parent) {
+      this.declarations = this.declarations.concat(TDBuiltinDeclarations);
+    }
   }
 
   get isBound() /* t:boolean */ {
@@ -17,7 +22,7 @@ export class TDScope {
     this.declarations.push(declaration);
   }
 
-  findDeclarationForName(name /* t:string */, limitScope /* t:boolean */) /* t:TDDeclaration */ {
+  findDeclarationForName(name /* t:String */, limitScope /* t:boolean */) /* t:TDDeclaration */ {
     const declaration = this.declarations.find((declaration) => declaration.name === name);
 
     return declaration || !limitScope && this.parent && this.parent.findDeclarationForName(name);

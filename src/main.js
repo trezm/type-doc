@@ -3,7 +3,7 @@
 import { TDFunctionalChecker } from './lib/TDFunctionalChecker';
 import { TDTypeChecker } from './lib/TDTypeChecker';
 
-export function main(entryFile='./examples/functions.test.js', checkFunctional=false) {
+export function main(entryFile='./examples/generics.test.js', checkFunctional=false) {
   const tdTypeChecker = new TDTypeChecker(entryFile);
   const tdFunctionalChecker = new TDFunctionalChecker(entryFile);
 

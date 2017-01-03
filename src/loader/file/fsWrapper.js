@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 
-export function readFileSync(name /* t:string */) /* t:string */ {
+export function readFileSync(name /* t:String */) /* t:String */ {
   name = _isADirectoryWithAnIndex(name) || _isAJsFile(name);
 
   if (!name) {
@@ -10,7 +10,7 @@ export function readFileSync(name /* t:string */) /* t:string */ {
   return fs.readFileSync(name, 'utf8');
 }
 
-function _isADirectoryWithAnIndex(name) /* t:string? */ {
+function _isADirectoryWithAnIndex(name) /* t:String? */ {
   try {
     let stat = fs.lstatSync(name);
     return stat.isDirectory() && _isAJsFileWithExtension(name + '/index.js');
@@ -19,7 +19,7 @@ function _isADirectoryWithAnIndex(name) /* t:string? */ {
   }
 }
 
-function _isAJsFile(name) /* t:string? */ {
+function _isAJsFile(name) /* t:String? */ {
   try {
     return _isAJsFileWithoutExtension(name) || _isAJsFileWithExtension(name);
   } catch(e) {
@@ -27,7 +27,7 @@ function _isAJsFile(name) /* t:string? */ {
   }
 }
 
-function _isAJsFileWithoutExtension(name) /* t:string? */ {
+function _isAJsFileWithoutExtension(name) /* t:String? */ {
   try {
     let stat = fs.lstatSync(name + '.js');
     return stat.isFile() && name + '.js';
@@ -36,7 +36,7 @@ function _isAJsFileWithoutExtension(name) /* t:string? */ {
   }
 }
 
-function _isAJsFileWithExtension(name) /* t:string? */ {
+function _isAJsFileWithExtension(name) /* t:String? */ {
   try {
     let stat = fs.lstatSync(name);
     return stat.isFile() && name;

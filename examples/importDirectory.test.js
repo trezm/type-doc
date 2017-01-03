@@ -1,3 +1,3 @@
 import { s } from './testDirectory';
 
-var n /* t:number */ = s;
+var n /* t:Number */ = s;
