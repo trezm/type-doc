@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Static typechecking in valid javascript",
   "main": "dist/main.js",
+  "bin": {
+    "type-doc": "bin/type-doc"
+  },
   "scripts": {
     "docs": "gulp docs && node docs/src/server/server.js",
     "docs:devtool": "gulp docs && node_modules/.bin/devtool docs/src/server/server.js",

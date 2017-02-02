@@ -1,8 +1,10 @@
 'use strict';
 
 import { TDBinding } from './TDBinding';
+import { TDClassType } from './TDClassType';
 import { TDDeclaration } from './TDDeclaration';
 import { TDBuiltinDeclarations } from './TDBuiltinDeclarations';
+import { TDMethodDeclaration } from './TDMethodDeclaration';
 
 export class TDScope {
   constructor(parent /* t:TDScope */) {
@@ -34,14 +36,80 @@ export class TDScope {
     switch (node.object.type) {
       case 'ThisExpression':
         return (this.binding && this.binding.findDeclarationForName(propertyName)) ||
+          (this.this && this.this.type.properties && this.this.type.properties[propertyName]) ||
           (this.parent && this.parent.findDeclarationForStaticMember(node));
       default:
         return;
     }
   }
 
-  initializeBinding() {
-    this.binding = new TDBinding();
+  findDeclarationForMember(node /* t:Object */) /* t:TDDeclaration */ {
+    const propertyName = node.property.name;
+
+    switch (node.object.type) {
+      case 'ThisExpression':
+        return (this.binding && this.binding.findDeclarationForName(propertyName)) ||
+          (this.parent && this.parent.findDeclarationForStaticMember(node));
+      case 'MemberExpression': {
+        const objectDeclaration = node.object.scope.findDeclarationForMember(node.object);
+        const classDeclaration = objectDeclaration &&
+          objectDeclaration.type &&
+          node.scope.findDeclarationForName(objectDeclaration.type.typeString);
+
+        if (classDeclaration && classDeclaration.type.properties) {
+          return classDeclaration.type.properties[node.property.name];
+        } else if (objectDeclaration && objectDeclaration.type && objectDeclaration.type.properties) {
+          return objectDeclaration.type.properties[node.property.name];
+        } else {
+          return objectDeclaration;
+        }
+      }
+      case 'Identifier': {
+        let declaration = this.findDeclarationForName(node.object.name);
+
+        if (declaration &&
+          declaration.type &&
+          !(declaration.type instanceof TDClassType)) {
+          declaration = this.findDeclarationForName(declaration.type.typeString);
+        }
+
+        /**
+         * A little bit of a hack here to wrap a TDType in a declaration like a method.
+         */
+        if (declaration &&
+          declaration.type &&
+          declaration.type.properties &&
+          declaration.type.properties[node.property.name]) {
+          let propType = declaration.type.properties[node.property.name];
+          let signature = propType.types;
+
+          declaration = new TDMethodDeclaration(signature.pop(), node.property.name);
+
+          signature.forEach((type) => declaration.addParam(new TDDeclaration(type, undefined)));
+        } else if (declaration &&
+          declaration.type &&
+          declaration.type.properties) {
+          return undefined;
+        }
+
+        return declaration;
+      }
+      default:
+        return;
+    }
+
+  }
+
+  findThisDef() {
+    return this.this || this.parent && this.parent.findThisDef();
+  }
+
+  initializeBinding(returnType) {
+    this.binding = new TDBinding(returnType);
+  }
+
+  initializeThis(_this /* t:TDDeclaration */) {
+    this.this = _this;
   }
 
   addBoundMethodDeclaration(declaration /* t:TDMethodDeclaration */) {

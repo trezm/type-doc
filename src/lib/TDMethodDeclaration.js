@@ -24,6 +24,7 @@ export class TDMethodDeclaration extends TDDeclaration {
         .concat(localReturnType)
         .join(' -> ')
       );
+    return this;
   }
 
   findParam(name) {

@@ -3,6 +3,7 @@
 import { TDDeclaration } from './TDDeclaration';
 import { TDMethodDeclaration } from './TDMethodDeclaration';
 import { TDScope } from './TDScope';
+import { TDType } from './TDType';
 
 export class TDScopeGenerator {
   constructor(ast) {
@@ -34,11 +35,15 @@ export class TDScopeGenerator {
         return;
       case 'ClassDeclaration': {
         const scope = new TDScope(existingScope);
+        const declaration = new TDDeclaration(node.tdType, node.id.name);
         scope.initializeBinding();
+        scope.initializeThis(declaration);
 
+        existingScope.addDeclaration(declaration);
         node.body.body.forEach((statement) => this._assignDeclarationTypes(statement, scope));
         return;
       }
+      case 'FunctionExpression':
       case 'ArrowFunctionExpression': {
         const body = node.body && node.body.body || [node.body];
         const arrowExpressionScope = new TDScope(existingScope);
@@ -55,19 +60,24 @@ export class TDScopeGenerator {
         const scope = new TDScope(existingScope);
         const tdType = this._searchForNodeType(node.id);
         const tdDeclaration = new TDMethodDeclaration(tdType, node.id.name);
-        scope.initializeBinding();
+        scope.initializeBinding(tdType);
 
         node.params.forEach((param) => {
           let paramDeclaration;
 
           if (param.tdType.typeString.indexOf('->') > -1) {
-            paramDeclaration = new TDMethodDeclaration(param.tdType, param.name);
+            let returnType = new TDType(param.tdType.typeList[param.tdType.typeList.length - 1]);
+            paramDeclaration = new TDMethodDeclaration(returnType, param.name);
+
+            for (let i = 0; i < param.tdType.typeList.length - 1; i++) {
+              paramDeclaration.addParam(new TDDeclaration(new TDType(param.tdType.typeList[i]), undefined));
+            }
           } else {
             paramDeclaration = new TDDeclaration(param.tdType, param.name);
           }
 
-          tdDeclaration.addParam(new TDDeclaration(param.tdType, param.name));
-          scope.addDeclaration(new TDDeclaration(param.tdType, param.name));
+          tdDeclaration.addParam(paramDeclaration);
+          scope.addDeclaration(paramDeclaration);
         });
 
         existingScope.addDeclaration(tdDeclaration);
@@ -84,17 +94,18 @@ export class TDScopeGenerator {
 
         new TDScopeGenerator(relevantImport.ast).generate();
 
-        node.specifiers.forEach((specifier) => {
-          const declaration = this._findImportOrRequireForName(specifier.imported.name, relevantImport);
+        node.specifiers
+          .filter((specifier) => specifier.imported)
+          .forEach((specifier) => {
+            const declaration = this._findImportOrRequireForName(specifier.imported.name, relevantImport);
 
-          if (declaration) {
-            existingScope.addDeclaration(new TDDeclaration(declaration.type, specifier.local.name));
-          }
-        });
+            if (declaration) {
+              existingScope.addDeclaration(new TDDeclaration(declaration.type, specifier.local.name));
+            }
+          });
         return;
       }
       case 'ImportSpecifier': {
-        console.log('node:', node);
         return;
       }
       case 'VariableDeclaration': {
@@ -129,6 +140,7 @@ export class TDScopeGenerator {
         this._assignDeclarationTypes(node.argument, existingScope);
         return;
       }
+      case 'AssignmentExpression':
       case 'BinaryExpression': {
         this._assignDeclarationTypes(node.left, existingScope);
         this._assignDeclarationTypes(node.right, existingScope);
@@ -140,6 +152,12 @@ export class TDScopeGenerator {
       }
       case 'CallExpression': {
         node.arguments.forEach((argument) => this._assignDeclarationTypes(argument, existingScope));
+        this._assignDeclarationTypes(node.callee, existingScope);
+        return;
+      }
+      case 'MemberExpression': {
+        this._assignDeclarationTypes(node.object, existingScope);
+        this._assignDeclarationTypes(node.property, existingScope);
         return;
       }
       default:
