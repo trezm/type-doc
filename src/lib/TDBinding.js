@@ -1,5 +1,6 @@
 export class TDBinding {
-  constructor() {
+  constructor(returnType) {
+    this.returnType = returnType;
     this.methodDeclarations = [];
     this.variableDeclarations = [];
   }

@@ -52,7 +52,7 @@ const results /* t:String */ = translate(aNumber, (theNumber) => theNumber);
   it('should throw errors with inline mixed generics', () => {
     const errors = new TDTypeChecker(`
 function makeANumber(input /* t:a */, numberifier /* t:a -> Number */) /* t:Number */ {
-  return translationFunction(input);
+  return numberifier(input);
 }
 
 const aString /* t:String */ = '4';

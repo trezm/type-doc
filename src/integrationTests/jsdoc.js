@@ -35,6 +35,9 @@ add(n, s)`).run();
 const n /* t:Number */ = 1;
 const s /* t:String */ = 'asdf';
 
+/**
+ * @class TestClass
+ */
 class TestClass {
   constructor() {
     const s /* t:String */ = this.add(1, 2);
@@ -43,6 +46,7 @@ class TestClass {
   /**
    * Add two Numbers
    *
+   * @memberOf TestClass
    * @param {Number} a - The first Number
    * @param {Number} b - The second Number
    * @returns {Number} - the sum of the arguments
@@ -61,6 +65,9 @@ class TestClass {
 
     it('should check return values of other methods', () => {
       const errors = new TDTypeChecker(`
+/**
+ * @class TestClass
+ */
 class TestClass {
   constructor() {
   }
@@ -68,6 +75,7 @@ class TestClass {
   /**
    * Add two Numbers
    *
+   * @memberOf TestClass
    * @param {Number} a - The first Number
    * @param {Number} b - The second Number
    * @returns {Number} - the sum of the arguments
@@ -79,12 +87,13 @@ class TestClass {
   /**
    * Add two Numbers
    *
+   * @memberOf TestClass
    * @param {String} a - The first Number
    * @param {String} b - The second Number
    * @returns {String} - the sum of the arguments
    */
   adds(a, b) {
-    return this.add(a, b);
+    return this.add(Number(a), Number(b));
   }
 }
 `).run();
@@ -93,6 +102,37 @@ class TestClass {
       expect(errors.length).to.equal(1);
       expect(errors[0].extras.expectedType).to.equal('String');
       expect(errors[0].extras.actualType).to.equal('Number');
+    });
+
+    it('should check if a method exists in a method call on an instantiated class', () => {
+      const errors = new TDTypeChecker(`
+/**
+ * @class TestClass
+ */
+  class TestClass {
+    constructor() {
+    }
+
+    /**
+     * Returns the string it's passed
+     *
+     * @memberOf TestClass
+     * @param {String} s - The string to return
+     * @returns {String} - the string passed in
+     */
+    aGoodMethod(s /* t:String */) /* t:String */ {
+      return s;
+    }
+  }
+
+  const example /* t:TestClass */ = new TestClass();
+  example.aBadMethod();
+`).run({
+        strictClassChecks: true
+      });
+
+      expect(errors[0].extras.property).to.equal('aBadMethod');
+      expect(errors[0].extras.class).to.equal('TestClass');
     });
   });
 });

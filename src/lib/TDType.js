@@ -5,15 +5,14 @@ import { v4 } from 'node-uuid';
 export class TDType {
   constructor(typeString='any' /* t:String */) {
     if (typeString.constructor.name === this.constructor.name) {
+      this.isAny = typeString.isAny;
       typeString = typeString.typeString;
+    } else if (typeString === 'any') {
+      this.isAny = true;
+      typeString = v4();
     }
 
     this.typeString = typeString;
-
-    if (this.typeString === 'any') {
-      this.isAny = true;
-      this.typeString = v4();
-    }
 
     this.typeList = typeString
       .split(' ')
@@ -31,6 +30,10 @@ export class TDType {
 
   get isGeneric() /* t:Boolean */ {
     return this.typeList.some((type) => type === type.toLowerCase());
+  }
+
+  get types() /* t:Array TDType */ {
+    return this.typeList.map((typeString) => new TDType(typeString));
   }
 
   equals(otherType /* t:TDType */) /* t:Boolean */ {

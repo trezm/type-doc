@@ -49,6 +49,7 @@
       "request": "launch",
       "preLaunchTask": "build:dev",
       "program": "${workspaceRoot}/node_modules/mocha/bin/_mocha",
+      "sourceMaps": true,
       "stopOnEntry": false,
       "args": [
         "dist/integrationTests/**/*.js"

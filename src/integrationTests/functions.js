@@ -171,4 +171,20 @@ function d(x /* t:String */) /* t:String */ {
       expect(errors[1].extras.actualType).to.equal('Number');
     });
   });
+
+  it('should allow chained functions (like promises)', () => {
+    const errors = new TDTypeChecker(`
+messaging.getToken()
+  .then(function(refreshedToken) {
+    userService.addFCMToken(refreshedToken)
+  })
+  .catch(function(err) {
+    console.log('Unable to retrieve refreshed token ', err);
+  });
+    `).run();
+
+    console.log('errors:', JSON.stringify(errors, null, 2));
+    expect(errors).to.exist;
+    expect(errors.length).to.equal(0);
+  });
 });

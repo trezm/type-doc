@@ -1,18 +1,26 @@
 'use strict';
 
-import { TDDeclaration } from './TDDeclaration';
+import { TDClassType } from './TDClassType';
 import { TDScope } from './TDScope';
 import { TDType } from './TDType';
 
 const TYPEDEF_REGEX = /^\s*t:(.+)$/;
+const CLASSDEF_REGEX = /\s*class\s*::\s*[^\s]+\s*/;
+const CLASSMETHODDEF_REGEX = /^\s\s+[^\s]+\s*::\s*[^\s][^\n]*$/gm;
 const JSDOC_PARAMS_REGEX = /@param\s*\{[^\}]+\}\s*[^\s]+/g;
+const JSDOC_CLASSES_REGEX = /@class\s*([^\s\]]+)/g;
 const JSDOC_SINGLE_PARAM_REGEX = /@param\s*\{([^\}]+)\}\s*\[?([^\s\]]+)\]?/;
+const JSDOC_SINGLE_CLASS_REGEX = /@class\s*([^\s\]]+)/;
+const JSDOC_MEMBEROF_REGEX = /@memberof\s*([^\s\]]+)/i;
 const JSDOC_RETURNS_REGEX = /@returns\s*\{([^\}]+)\}/;
 
 export class TDTypeAdapter {
   constructor(ast) {
     this._ast = ast;
+
+    this._globalClasses = {};
     this._typeDefs = this._findTypeDefComments(this._ast);
+    this._classDefs = this._findClassDefComments(this._ast);
     this._jsDocDefs = this._findJSDocDefComments(this._ast);
   }
 
@@ -27,7 +35,12 @@ export class TDTypeAdapter {
         node.value.body.body.forEach((statement) => this._assignDeclarationTypes(statement));
         node.value.params.forEach((param) => this._addTypeToParameter(param));
         this._addTypeToFunction(node.value, node.key);
-        this._addJSDocTypeToClassMethod(node.value);
+        this._addJSDocTypeToClassMethod(node);
+
+        let signature = node.value.params.map((param) => param.tdType.typeString);
+        signature = signature.concat([node.value.tdType.typeString]);
+
+        node.tdSignature = new TDType(signature.join(' -> '));
         node.tdType = node.value.tdType;
 
         return;
@@ -36,6 +49,8 @@ export class TDTypeAdapter {
         node.body.forEach((statement) => this._assignDeclarationTypes(statement));
         return;
       case 'ClassDeclaration': {
+        this._addTypeToClass(node);
+        this._addJSDocTypeToClass(node);
         node.body.body.forEach((statement) => this._assignDeclarationTypes(statement));
         return;
       }
@@ -142,19 +157,90 @@ export class TDTypeAdapter {
     if (foundType) {
       const paramStrings = foundType.value.match(JSDOC_PARAMS_REGEX);
       const returns = (foundType.value.match(JSDOC_RETURNS_REGEX) || [])[1];
+      const memberMatch = foundType.value.match(JSDOC_MEMBEROF_REGEX);
+      const memberString = memberMatch && memberMatch[1];
+      const ownerClass = this._globalClasses[memberString];
+
+      let signature = [];
 
       paramStrings.forEach((paramString) => {
         const paramStringMatch = paramString.match(JSDOC_SINGLE_PARAM_REGEX);
-        const param = node.params.find((functionParam) => functionParam.name === paramStringMatch[2]);
+        const param = node.value.params.find((functionParam) => functionParam.name === paramStringMatch[2]);
 
         if (param) {
           param.tdType = new TDType(paramStringMatch[1]);
+          signature = signature.concat(paramStringMatch[1]);
         } else {
           console.log('undocumented param:', paramString);
         }
       });
+
+      signature = signature.concat([returns]);
+
+      node.tdSignature = new TDType(signature.join(' -> '));
       node.tdType = new TDType(returns);
-      node.tdType = new TDType(returns);
+      node.value.tdSignature = node.tdSignature;
+      node.value.tdType = node.tdType;
+
+      if (ownerClass) {
+        ownerClass.addPropertyOrMethod(node.key.name, node.tdSignature.typeString);
+      }
+    }
+  }
+
+  _addJSDocTypeToClass(node) {
+    const foundType = this._jsDocDefs.find((typeDef) => {
+      const commentEndLine = typeDef.loc.end.line;
+      const functionStartLine = node.loc.start.line;
+
+      return functionStartLine === commentEndLine + 1;
+    });
+
+    if (foundType) {
+      const classMatch = foundType.value.match(JSDOC_SINGLE_CLASS_REGEX);
+      const classString = classMatch && classMatch[1];
+      const memberMatch = foundType.value.match(JSDOC_MEMBEROF_REGEX);
+      const memberString = memberMatch && memberMatch[1];
+      const globalIdentifier = (memberString ? memberString + '.' : '') + classString;
+
+      node.tdType = new TDClassType(classString);
+
+      this._globalClasses[globalIdentifier] = node.tdType;
+    }
+  }
+
+  _addTypeToClass(node) {
+    const foundType = this._classDefs.find((typeDef) => {
+      const commentEndLine = typeDef.loc.end.line;
+      const functionStartLine = node.loc.start.line;
+
+      return functionStartLine === commentEndLine + 1;
+    });
+
+    if (!foundType) {
+      return;
+    }
+
+    const trimmedComment = foundType
+      .value
+      .replace(/^\s*\*/gm, '');
+    const classMatch = (trimmedComment
+      .match(CLASSDEF_REGEX) || [])
+      .map((property) => property.split('::')
+        .map((prop) => prop.trim()));
+    const classProperties = (trimmedComment
+      .match(CLASSMETHODDEF_REGEX) || [])
+      .map((property) => property.split('::')
+        .map((prop) => prop.trim()))
+      .filter((property) => property[0] !== 'class');
+
+    if (classMatch && classMatch.length) {
+      const classType = new TDClassType(classMatch[0][1]);
+
+      classProperties
+        .forEach((prop) => classType.addPropertyOrMethod(prop[0], prop[1]));
+
+      node.tdType = classType;
     }
   }
 
@@ -220,13 +306,23 @@ export class TDTypeAdapter {
       .filter((comment) => comment.value.match(TYPEDEF_REGEX));
   }
 
+  _findClassDefComments(ast) {
+    return ast.comments
+      .filter((comment) => comment
+        .value
+        .replace(/^\s*\*/gm, '')
+        .replace(/\n/g, '')
+        .match(CLASSDEF_REGEX));
+  }
+
   _findJSDocDefComments(ast) {
     return ast.comments
       .filter((comment) => {
+        const classes = comment.value.match(JSDOC_CLASSES_REGEX);
         const params = comment.value.match(JSDOC_PARAMS_REGEX);
         const returns = comment.value.match(JSDOC_RETURNS_REGEX);
 
-        return params || returns;
+        return classes || params || returns;
       });
   }
 
