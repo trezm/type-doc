@@ -85,7 +85,24 @@ export class TDScopeGenerator {
         return;
       }
       case 'ExportNamedDeclaration': {
-        this._assignDeclarationTypes(node.declaration, existingScope);
+        if (node.declaration) {
+          this._assignDeclarationTypes(node.declaration, existingScope);
+        } else {
+          const imports = this.ast.imports;
+          const relevantImport = imports.find((anImport) => anImport.source === node.source);
+
+          new TDScopeGenerator(relevantImport.ast).generate();
+
+          node.specifiers
+            .filter((specifier) => specifier.imported || specifier.exported)
+            .forEach((specifier) => {
+              const declaration = this._findImportOrRequireForName((specifier.imported || specifier.exported).name, relevantImport);
+
+              if (declaration) {
+                existingScope.addDeclaration(new TDDeclaration(declaration.type, specifier.local.name));
+              }
+            });
+        }
         return;
       }
       case 'ImportDeclaration': {

@@ -34,10 +34,13 @@ export class TDScope {
     const propertyName = node.property.name;
 
     switch (node.object.type) {
-      case 'ThisExpression':
+      case 'ThisExpression': {
+        const propertyType = this.this && this.this.type.properties && this.this.type.properties[propertyName];
+
         return (this.binding && this.binding.findDeclarationForName(propertyName)) ||
-          (this.this && this.this.type.properties && this.this.type.properties[propertyName]) ||
+          (propertyType && new TDDeclaration(propertyType, undefined)) ||
           (this.parent && this.parent.findDeclarationForStaticMember(node));
+      }
       default:
         return;
     }
@@ -56,9 +59,9 @@ export class TDScope {
           objectDeclaration.type &&
           node.scope.findDeclarationForName(objectDeclaration.type.typeString);
 
-        if (classDeclaration && classDeclaration.type.properties) {
+        if (classDeclaration) {
           return classDeclaration.type.properties[node.property.name];
-        } else if (objectDeclaration && objectDeclaration.type && objectDeclaration.type.properties) {
+        } else if (objectDeclaration && objectDeclaration.type.properties) {
           return objectDeclaration.type.properties[node.property.name];
         } else {
           return objectDeclaration;

@@ -37,10 +37,13 @@ export class TDASTGenerator {
       const imports /* t:[Object] */ = this._findImports(rootAst);
       const importAsts /* t:[Object] */ = this._generateImportAsts(imports);
 
+      const exportImports /* t:[Object] */ = this._findExportImports(rootAst);
+      const exportImportAsts /* t:[Object] */ = this._generateImportAsts(exportImports);
+
       const requires /* t:[Obejct] */ = this._findRequires(rootAst);
       const requiresAsts /* t:[Object] */ = this._generateRequiresAsts(requires);
 
-      rootAst.imports = importAsts.concat(requiresAsts);
+      rootAst.imports = importAsts.concat(exportImportAsts).concat(requiresAsts);
       rootAst.file = resolve(this._entryFile);
     } catch (e) {
       // For now, eat the errors, it's probably an external module.
@@ -55,6 +58,10 @@ export class TDASTGenerator {
 
   _findImports(ast) /* t:[Object] */ {
     return ast.body.filter((node) => node.type === 'ImportDeclaration');
+  }
+
+  _findExportImports(ast) /* t:[Object] */ {
+    return ast.body.filter((node) => node.type === 'ExportNamedDeclaration' && node.declaration === null);
   }
 
   _findRequires(ast) /* t:[Object] */ {
@@ -81,8 +88,9 @@ export class TDASTGenerator {
 
     importList = importList
       .map((_import) => {
-        pathArray.push(_import.source.value.replace(/^\.\//, ''));
-        const astGenerator = new TDASTGenerator(pathArray.join('/'));
+        const astGenerator = new TDASTGenerator(
+          pathArray.concat([_import.source.value.replace(/^\.\//, '')]).join('/')
+        );
         return {
           astGenerator: astGenerator,
           ast: astGenerator.ast,

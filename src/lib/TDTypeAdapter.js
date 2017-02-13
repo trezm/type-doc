@@ -99,7 +99,15 @@ export class TDTypeAdapter {
         return;
       }
       case 'ExportNamedDeclaration': {
-        this._assignDeclarationTypes(node.declaration);
+        /**
+         * If there is no declaration, then it's an export { blah } from './blah'
+         * so we should treat it as an import first.
+         */
+        if (!node.declaration) {
+          this._addTypeToImport(node);
+        } else {
+          this._assignDeclarationTypes(node.declaration);
+        }
         return;
       }
       case 'ImportDeclaration': {

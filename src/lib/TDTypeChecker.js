@@ -98,7 +98,11 @@ export class TDTypeChecker {
         return errors;
       }
       case 'ExportNamedDeclaration': {
-        return errors.concat(this._checkNode(node.declaration));
+        if (node.declaration) {
+          return errors.concat(this._checkNode(node.declaration));
+        } else {
+          return errors;
+        }
       }
       case 'ImportDeclaration': {
         return errors;
@@ -514,7 +518,6 @@ export class TDTypeChecker {
         } else {
           const objectType = this._findTypeForNode(node.object);
 
-          debugger;
           if (objectType &&
             !objectType.isAny) {
             // Note, we're assuming that property is _always_ an Identifier.
