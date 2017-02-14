@@ -64,8 +64,16 @@ export class TDASTGenerator {
     return ast.body.filter((node) => node.type === 'ExportNamedDeclaration' && node.declaration === null);
   }
 
-  _findRequires(ast) /* t:[Object] */ {
-    return ast.body.filter((node) => {
+  _findRequires(ast, requires=[]) /* t:[Object] */ {
+    const body = ast.body.body || ast.body;
+
+    requires = requires.concat(body
+      .filter((statement) => Boolean(statement.body))
+      .map((statement) => this._findRequires(statement)))
+      .reduce((a, b) => a.concat(b), []);
+
+    return requires.concat(
+      body.filter((node) => {
         const retval = node.type === 'VariableDeclaration' &&
           node.declarations.find((declaration) => declaration.init && declaration.init.type === 'CallExpression');
 
@@ -79,7 +87,7 @@ export class TDASTGenerator {
           /^\.\//.test(declarator.init.arguments[0].value) && // For now, only allow local modules
           declarator.init.type === 'CallExpression' &&
           declarator.init.callee.name === 'require';
-      });
+      }));
   }
 
   _generateImportAsts(importList /* t:[Object] */) /* t:[Object] */ {

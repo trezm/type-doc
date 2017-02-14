@@ -71,4 +71,21 @@ var s /* t:String */ = test
     expect(errors[0].extras.expectedType).to.equal('String');
     expect(errors[0].extras.actualType).to.equal('Number');
   });
+
+  it('should allow requires not at the root level', () => {
+    const readFileSyncStub = sandbox.stub(fs, 'readFileSync', (file) => {
+      return {
+        './test': `var n = 2;`,
+        './main': `
+function runATest() {
+  const test = require('./test');
+}
+`
+      }[file];
+    });
+
+    const errors = new TDTypeChecker('./main').run();
+
+    expect(errors.length).to.equal(0);
+  });
 });

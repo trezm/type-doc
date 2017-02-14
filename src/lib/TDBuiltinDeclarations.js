@@ -13,6 +13,7 @@ export const TDBuiltinDeclarations = [
     new TDClassType('NodeModule')
       .addPropertyDeclaration('exports', 'any'),
     'NodeModule'),
+  new TDMethodDeclaration(new TDType('any'), 'require')
   // new TDDeclaration(new TDType('Promise a'), 'Promise'),
   // new TDDeclaration(
   //   new TDClassType('Promise')
