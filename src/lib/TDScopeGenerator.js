@@ -1,7 +1,6 @@
 'use strict';
 
 import { TDDeclaration } from './TDDeclaration';
-import { TDMethodDeclaration } from './TDMethodDeclaration';
 import { TDScope } from './TDScope';
 import { TDType } from './TDType';
 
@@ -17,17 +16,17 @@ export class TDScopeGenerator {
       case 'MethodDefinition': {
         const scope = new TDScope(existingScope);
 
-        node.value.body.body.forEach((statement) => this._assignDeclarationTypes(statement, scope));
-
         const tdType = this._searchForNodeType(node);
-        const tdDeclaration = new TDMethodDeclaration(tdType, node.key.name);
+        const tdDeclaration = new TDDeclaration(tdType, node.key.name);
+        scope.initializeBinding(tdType);
 
         node.value.params.forEach((param) => {
-          tdDeclaration.addParam(new TDDeclaration(param.tdType, param.name));
-          scope.addDeclaration(new TDDeclaration(param.tdType, param.name));
+          const paramDeclaration = new TDDeclaration(param.tdType, param.name);
+          scope.addDeclaration(paramDeclaration);
         });
 
         existingScope.addBoundMethodDeclaration(tdDeclaration);
+        node.value.body.body.forEach((statement) => this._assignDeclarationTypes(statement, scope));
         return;
       }
       case 'Program':
@@ -59,24 +58,11 @@ export class TDScopeGenerator {
       case 'FunctionDeclaration': {
         const scope = new TDScope(existingScope);
         const tdType = this._searchForNodeType(node.id);
-        const tdDeclaration = new TDMethodDeclaration(tdType, node.id.name);
+        const tdDeclaration = new TDDeclaration(tdType, node.id.name);
         scope.initializeBinding(tdType);
 
         node.params.forEach((param) => {
-          let paramDeclaration;
-
-          if (param.tdType.typeString.indexOf('->') > -1) {
-            let returnType = new TDType(param.tdType.typeList[param.tdType.typeList.length - 1]);
-            paramDeclaration = new TDMethodDeclaration(returnType, param.name);
-
-            for (let i = 0; i < param.tdType.typeList.length - 1; i++) {
-              paramDeclaration.addParam(new TDDeclaration(new TDType(param.tdType.typeList[i]), undefined));
-            }
-          } else {
-            paramDeclaration = new TDDeclaration(param.tdType, param.name);
-          }
-
-          tdDeclaration.addParam(paramDeclaration);
+          const paramDeclaration = new TDDeclaration(param.tdType, param.name);
           scope.addDeclaration(paramDeclaration);
         });
 
@@ -178,7 +164,6 @@ export class TDScopeGenerator {
         return;
       }
       default:
-        // console.log('unidentified node:', node.type);
         return;
     }
   }

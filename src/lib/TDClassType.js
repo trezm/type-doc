@@ -4,7 +4,7 @@ import { TDType } from './TDType';
 
 /**
  * class :: TDClassType
- *   methods :: Array TDMethodDeclaration
+ *   methods :: Array TDDeclaration
  *   properties :: Array TDDeclaration
  *   addPropertyOrMethod :: String -> String -> TDClassType
  *   addMethodDeclaration :: String -> String -> TDClassType

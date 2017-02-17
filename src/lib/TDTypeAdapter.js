@@ -40,7 +40,6 @@ export class TDTypeAdapter {
         let signature = node.value.params.map((param) => param.tdType.typeString);
         signature = signature.concat([node.value.tdType.typeString]);
 
-        node.tdSignature = new TDType(signature.join(' -> '));
         node.tdType = node.value.tdType;
 
         return;
@@ -119,7 +118,6 @@ export class TDTypeAdapter {
         return;
       }
       default:
-        // console.log('unidentified node:', node.type);
         return;
     }
   }
@@ -139,18 +137,23 @@ export class TDTypeAdapter {
       const paramStrings = foundType.value.match(JSDOC_PARAMS_REGEX);
       const returns = (foundType.value.match(JSDOC_RETURNS_REGEX) || [])[1];
 
+      let signature = [];
+
       paramStrings.forEach((paramString) => {
         const paramStringMatch = paramString.match(JSDOC_SINGLE_PARAM_REGEX);
         const param = node.params.find((functionParam) => functionParam.name === paramStringMatch[2]);
 
         if (param) {
-          param.tdType = new TDType(paramStringMatch[1]);
+          signature = signature.concat(paramStringMatch[1]);
         } else {
           console.log('undocumented param:', paramString);
         }
       });
-      node.tdType = new TDType(returns);
-      node.id.tdType = new TDType(returns);
+
+      signature = signature.concat([returns]);
+
+      node.tdType = new TDType(signature.join(' -> '));
+      node.id.tdType = node.tdType;
     }
   }
 
@@ -176,7 +179,6 @@ export class TDTypeAdapter {
         const param = node.value.params.find((functionParam) => functionParam.name === paramStringMatch[2]);
 
         if (param) {
-          param.tdType = new TDType(paramStringMatch[1]);
           signature = signature.concat(paramStringMatch[1]);
         } else {
           console.log('undocumented param:', paramString);
@@ -185,13 +187,11 @@ export class TDTypeAdapter {
 
       signature = signature.concat([returns]);
 
-      node.tdSignature = new TDType(signature.join(' -> '));
-      node.tdType = new TDType(returns);
-      node.value.tdSignature = node.tdSignature;
+      node.tdType = new TDType(signature.join(' -> '));
       node.value.tdType = node.tdType;
 
       if (ownerClass) {
-        ownerClass.addPropertyOrMethod(node.key.name, node.tdSignature.typeString);
+        ownerClass.addPropertyOrMethod(node.key.name, node.tdType.typeString);
       }
     }
   }
@@ -301,11 +301,16 @@ export class TDTypeAdapter {
           (typeDef.loc.end.column < node.body.loc.start.column));
       return typeDefIsAfterParams && typeDefIsBeforeBody;
     });
-    const type = foundType ? this._extractType(foundType.value, TYPEDEF_REGEX) : new TDType();
 
-    node.tdType = type;
+    const type = foundType ? this._extractType(foundType.value, TYPEDEF_REGEX).typeString : 'any';
+    const paramTypes = (node.params || [new TDType()]).map((param) => {
+      const typeString = param.tdType.isAny ? 'any' : param.tdType.typeString;
+      return typeString.indexOf('->') > -1 ? `(${typeString})` : typeString;
+    });
+
+    node.tdType = new TDType(paramTypes.concat([type]).join(' -> '));
     if (identifier) {
-      identifier.tdType = type;
+      identifier.tdType = node.tdType;
     }
   }
 

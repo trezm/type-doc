@@ -4,7 +4,7 @@ import { TDBinding } from './TDBinding';
 import { TDClassType } from './TDClassType';
 import { TDDeclaration } from './TDDeclaration';
 import { TDBuiltinDeclarations } from './TDBuiltinDeclarations';
-import { TDMethodDeclaration } from './TDMethodDeclaration';
+import { TDType } from './TDType';
 
 export class TDScope {
   constructor(parent /* t:TDScope */) {
@@ -84,11 +84,11 @@ export class TDScope {
           declaration.type.properties &&
           declaration.type.properties[node.property.name]) {
           let propType = declaration.type.properties[node.property.name];
-          let signature = propType.types;
+          let signature = propType.types
+            .map((type) => type.typeString)
+            .join(' -> ');
 
-          declaration = new TDMethodDeclaration(signature.pop(), node.property.name);
-
-          signature.forEach((type) => declaration.addParam(new TDDeclaration(type, undefined)));
+          declaration = new TDDeclaration(new TDType(signature), node.property.name);
         } else if (declaration &&
           declaration.type &&
           declaration.type.properties) {
@@ -115,7 +115,7 @@ export class TDScope {
     this.this = _this;
   }
 
-  addBoundMethodDeclaration(declaration /* t:TDMethodDeclaration */) {
+  addBoundMethodDeclaration(declaration /* t:TDDeclaration */) {
     if (this.isBound) {
       this.binding.addMethodDeclaration(declaration);
     } else if (this.parent) {
