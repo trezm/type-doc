@@ -12,6 +12,15 @@ gulp.task('build:dev', () => {
     .pipe(gulp.dest('dist'));
 });
 
+gulp.task('build:prod', ['clean:source'], () => {
+  return gulp.src('src/**/*.js')
+    .pipe(plugins.babel({
+      presets: ['es2015'],
+      sourceMaps: false
+    }))
+    .pipe(gulp.dest('dist'));
+});
+
 gulp.task('test', ['build:dev'], () => {
   return gulp.src(['dist/**/*.spec.js', 'dist/integrationTests/**/*.js'], {
       read: false
@@ -24,6 +33,10 @@ gulp.task('test', ['build:dev'], () => {
     .once('end', () => {
       process.exit();
     });
+});
+
+gulp.task('clean:source', () => {
+  return gulp.src('dist', { read: false }).pipe(clean());
 });
 
 /**
