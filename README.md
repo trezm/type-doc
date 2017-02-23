@@ -64,7 +64,7 @@ Types are recognized as capitalized words, for example `Number` is a type. Types
 
 Function or method types are formatted as capitalized words separated by `->`, for example, a function that tells you the color of a Jedi's lightsaber would have a type like this:
 ```
-Jedi -> color
+Jedi -> Color
 ```
 
 Unions are also allowed, for example, if you wanted to know who would win in a Jedi vs Sith fight, you could write a function with the signature
