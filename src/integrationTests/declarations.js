@@ -104,7 +104,7 @@ var hi /* t:Number */ = greeting;
     it('should respect multiple types', () => {
       const errors = new TDTypeChecker(`
 var aNumber /* t:String | Number */ = '1'
-var hi /* t:Number */ = greeting;
+var hi /* t:Number */ = aNumber;
 `).run();
 
       expect(errors.length).to.equal(0);

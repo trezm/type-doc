@@ -5,12 +5,12 @@ export class TDBinding {
     this.variableDeclarations = [];
   }
 
-  addMethodDeclaration(methodDeclaration /* t:TDMethodDeclaration */) {
+  addMethodDeclaration(methodDeclaration /* t:TDDeclaration */) {
     this.methodDeclarations.push(methodDeclaration);
   }
 
   addVariableDeclarations(variableDeclaration /* t:TDDeclaration */) {
-    this.methodDeclarations.push(variableDeclaration);
+    this.variableDeclarations.push(variableDeclaration);
   }
 
   findDeclarationForName(name /* t:String */) /* t:TDDeclaration */ {

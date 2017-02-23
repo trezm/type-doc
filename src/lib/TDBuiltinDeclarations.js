@@ -2,18 +2,16 @@
 
 import { TDClassType } from './TDClassType';
 import { TDDeclaration } from './TDDeclaration';
-import { TDMethodDeclaration } from './TDMethodDeclaration';
 import { TDType } from './TDType';
 
 export const TDBuiltinDeclarations = [
-  new TDMethodDeclaration(new TDType('Number'), 'Number')
-    .addParam(new TDDeclaration(new TDType('any'), 'anyToMakeNumber')),
+  new TDDeclaration(new TDType('any -> Number'), 'Number'),
   new TDDeclaration(new TDType('NodeModule'), 'module'),
   new TDDeclaration(
     new TDClassType('NodeModule')
       .addPropertyDeclaration('exports', 'any'),
     'NodeModule'),
-  new TDMethodDeclaration(new TDType('any'), 'require')
+  new TDDeclaration(new TDType('String -> any'), 'require')
   // new TDDeclaration(new TDType('Promise a'), 'Promise'),
   // new TDDeclaration(
   //   new TDClassType('Promise')

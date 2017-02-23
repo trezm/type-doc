@@ -117,7 +117,7 @@ addOne('0', (aString /* t:String */) => Number(aString));
     it('should check inline function return types', () => {
       const errors = new TDTypeChecker(`
 function addOne(x /* t:String */, stringToNumber /* t:String -> Number */) /* t:Number */ {
-  return stringToNumber(x) + 1;
+  return 1;
 }
 
 addOne('0', (aString /* t:String */) => aString);
@@ -183,7 +183,6 @@ messaging.getToken()
   });
     `).run();
 
-    console.log('errors:', JSON.stringify(errors, null, 2));
     expect(errors).to.exist;
     expect(errors.length).to.equal(0);
   });

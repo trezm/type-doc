@@ -282,7 +282,7 @@ export class TDTypeChecker {
   }
 
   _checkFunctionReturnType(node, errors=[]) {
-    const functionReturnType = node.tdType;
+    const functionReturnType = new TDType(node.tdType && node.tdType.typeList[node.tdType.typeList.length - 1]);
     const bodyReturnType = this._findReturnType(node.body);
 
     const error = this._testTypes(functionReturnType, bodyReturnType, node.loc.start.line);
@@ -310,8 +310,7 @@ export class TDTypeChecker {
     const genericTypes = {};
     return functionDeclaration && node.arguments.map((argument, index) => {
       const argumentDeclarationType = this._findTypeForNode(argument, argument.scope || scope);
-      const param = functionDeclaration.params[index];
-      const paramType = param.type;
+      const paramType = new TDType(functionDeclaration.type.typeList[index]);
       let genericsErrors = [];
 
       /* Assign any types to generics */
@@ -372,7 +371,7 @@ export class TDTypeChecker {
       })]);
     }
 
-    const error = this._testTypes(classMethodDef, node.tdSignature, node.loc.start.line);
+    const error = this._testTypes(classMethodDef, node.tdType, node.loc.start.line);
 
     if (error) {
       errors = errors.concat([error]);
@@ -484,13 +483,14 @@ export class TDTypeChecker {
           (returnType && returnType.typeString.split(' -> '));
         returnType = signature && signature.pop();
 
-        tdDeclaration && tdDeclaration.params && node.arguments.forEach((argument, index) => {
+        tdDeclaration && tdDeclaration.type.typeList.length > 1 && node.arguments.forEach((argument, index) => {
           const argumentDeclarationType = new TDType(this._findTypeForNode(argument, argument.scope || scope));
-          const param = tdDeclaration.params[index];
-          const paramType = param.type;
+          const paramTypeString = tdDeclaration.type.typeList[index];
 
-          paramType
-            .typeList
+          // Should do something with the real tokenizer here.
+          paramTypeString
+            .split('->')
+            .map((aType) => aType.trim())
             .forEach((typeString, index) => {
               if (genericTypes[typeString] && argumentDeclarationType.isGeneric) {
                 genericTypes[argumentDeclarationType.typeList[index]] = typeString;
