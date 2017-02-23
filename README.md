@@ -8,7 +8,6 @@ Type checking with valid JavaScript
 - [cli](#cli)
 - [Type Comments](#type-comments)
 - [What Works?](#what-works-right-now)
-- [TODO](#todo)
 
 ## Introduction
 TypeDoc aims to provide a static type checking without changing JavaScript. This is accomplished by adding type annotations via comments near declarations.
