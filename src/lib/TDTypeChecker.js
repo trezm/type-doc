@@ -531,7 +531,7 @@ export class TDTypeChecker {
               propertyType ||
               TDType.any();
           } else {
-            return;
+            return objectType;
           }
         }
       }
@@ -539,6 +539,9 @@ export class TDTypeChecker {
         const thisDeclaration = node.scope.findThisDef();
 
         return thisDeclaration && thisDeclaration.type;
+      }
+      case 'BlockStatement': {
+        return this._findReturnType(node);
       }
       default:
         return;

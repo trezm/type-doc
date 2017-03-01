@@ -40,7 +40,7 @@ export class TDASTGenerator {
       const exportImports /* t:[Object] */ = this._findExportImports(rootAst);
       const exportImportAsts /* t:[Object] */ = this._generateImportAsts(exportImports);
 
-      const requires /* t:[Obejct] */ = this._findRequires(rootAst);
+      const requires /* t:[Object] */ = this._findRequires(rootAst);
       const requiresAsts /* t:[Object] */ = this._generateRequiresAsts(requires);
 
       rootAst.imports = importAsts.concat(exportImportAsts).concat(requiresAsts);
@@ -75,7 +75,7 @@ export class TDASTGenerator {
     return requires.concat(
       body.filter((node) => {
         const retval = node.type === 'VariableDeclaration' &&
-          node.declarations.find((declaration) => declaration.init && declaration.init.type === 'CallExpression');
+          node.declarations.filter((declaration) => declaration.init && declaration.init.type === 'CallExpression');
 
         return retval;
       })
@@ -83,8 +83,9 @@ export class TDASTGenerator {
       .reduce((a, b) => a.concat(b), [])
       .filter((declarator) => {
         return declarator.init &&
+          declarator.init.arguments &&
           declarator.init.arguments.length &&
-          /^\.\//.test(declarator.init.arguments[0].value) && // For now, only allow local modules
+          /^\.\.?\//.test(declarator.init.arguments[0].value) && // For now, only allow local modules
           declarator.init.type === 'CallExpression' &&
           declarator.init.callee.name === 'require';
       }));

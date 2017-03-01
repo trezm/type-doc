@@ -124,7 +124,10 @@ export class TDScopeGenerator {
           const imports = this.ast.imports;
           const relevantImport = imports.find((anImport) => anImport.source === importName);
 
-          new TDScopeGenerator(relevantImport.ast).generate();
+          if (relevantImport) {
+            new TDScopeGenerator(relevantImport.ast).generate();
+          }
+
           const declaration = this._findImportOrRequireForName(undefined, relevantImport);
 
           if (declaration) {
@@ -200,6 +203,10 @@ export class TDScopeGenerator {
    * Find type for import or require
    */
   _findImportOrRequireForName(name /* t:String */, relevantImport /* t:Object */) {
+    if (!relevantImport) {
+      return new TDDeclaration(new TDType('any'), name);
+    }
+
     const declaration = relevantImport
       .ast
       .body

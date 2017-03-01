@@ -267,9 +267,11 @@ export class TDTypeAdapter {
     const imports = this._ast.imports;
     const relevantImport = imports.find((anImport) => anImport.source === importName);
 
-    // Add types to the new tree
-    const importTypeAdapter = new TDTypeAdapter(relevantImport.ast);
-    const importAst = importTypeAdapter.ast;
+    if (relevantImport) {
+      // Add types to the new tree
+      const importTypeAdapter = new TDTypeAdapter(relevantImport.ast);
+      const importAst = importTypeAdapter.ast;
+    }
   }
 
   _addTypeToDeclarator(node) {
