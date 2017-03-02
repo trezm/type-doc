@@ -204,7 +204,8 @@ export class TDTypeChecker {
 
     const objectType = this._findTypeForNode(node.object);
     if (!functionDeclaration &&
-      !objectType.isAny) {
+      !objectType.isAny &&
+      this.options.strictClassChecks) {
       return errors.concat([new UndeclaredError(`${node.property.name} is not a declared property of class ${objectType.typeString} on line ${node.loc.start.line}`, {
         property: node.property.name,
         class: objectType.typeString
@@ -215,6 +216,7 @@ export class TDTypeChecker {
   }
 
   _checkDeclaratorInitType(node, errors=[]) {
+    debugger;
     if (!node.id || !node.init) {
       return errors;
     }
@@ -519,14 +521,14 @@ export class TDTypeChecker {
           const objectType = this._findTypeForNode(node.object);
 
           if (objectType &&
-            !objectType.isAny) {
+            !objectType.isAny &&
+            objectType.properties) {
             // Note, we're assuming that property is _always_ an Identifier.
             const propertyType = objectType.properties[node.property.name];
 
             const classDeclaration = scope.findDeclarationForName(
               propertyType && propertyType.typeString
             );
-
             return (classDeclaration && classDeclaration.type) ||
               propertyType ||
               TDType.any();

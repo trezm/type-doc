@@ -1,13 +1,32 @@
 #!/usr/bin/env node
 'use strict';
 
-const isFunctional = process.argv[2] === '-f' ||
-  process.argv[2] === '--functional';
-const entryFile = isFunctional ? process.argv[3] : process.argv[2];
+let filesToTest = [];
+let options = {
+  strictClassCheck: false,
+  isFunctional: false
+};
+
+for (let i = 0; i < process.argv.length; i++) {
+  switch (process.argv[i]) {
+    case '-f':
+    case '--functional': {
+      options.isFunctional = true;
+      break;
+    }
+    case '-s':
+    case '--strict-class-check': {
+      options.strictClassCheck = true;
+      break;
+    }
+    default:
+      filesToTest = filesToTest.concat(process.argv[i]);
+  }
+}
 
 const typeChecker = require('../dist/main').main;
-const results = typeChecker(entryFile, isFunctional);
-
-results.forEach((result) => {
-  console.log(result.toString({ colors: true }));
-});
+filesToTest.forEach((file) => typeChecker(entryFile, options.isFunctional, options))
+  .reduce((a, b) => a.concat(b), [])
+  .forEach((result) => {
+    console.log(result.toString({ colors: true }));
+  });
