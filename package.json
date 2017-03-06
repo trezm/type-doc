@@ -1,6 +1,6 @@
 {
   "name": "type-doc",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Static typechecking in valid javascript",
   "main": "dist/main.js",
   "bin": {

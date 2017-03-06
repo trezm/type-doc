@@ -210,7 +210,15 @@ export class TDTypeChecker {
       this.options.strictClassChecks) {
       return errors.concat([new UndeclaredError(`${node.property.name} is not a declared property of class ${objectType.typeString} on line ${node.loc.start.line}`, {
         property: node.property.name,
-        class: objectType.typeString
+        class: objectType.typeString,
+        start: {
+          line: node.loc.start.line,
+          column: node.loc.start.column
+        },
+        end: {
+          line: node.loc.end.line,
+          column: node.loc.end.column
+        }
       })]);
     }
 
@@ -239,7 +247,7 @@ export class TDTypeChecker {
       assignmentType = this._findTypeForNode(node.init);
     }
 
-    const error = this._testTypes(declaratorType, assignmentType, node.loc.start.line);
+    const error = this._testTypes(declaratorType, assignmentType, node);
 
     return (error && errors.concat([error])) || errors;
   }
@@ -251,7 +259,7 @@ export class TDTypeChecker {
     const declaratorType = this._findTypeForNode(node.left);
     const assignmentType = this._findTypeForNode(node.right);
 
-    const error = this._testTypes(declaratorType, assignmentType, node.loc.start.line)
+    const error = this._testTypes(declaratorType, assignmentType, node);
 
     return (error && errors.concat([error])) || errors;
   }
@@ -275,11 +283,19 @@ export class TDTypeChecker {
       this.options.strictClassChecks) {
       return errors.concat([new UndeclaredError(`${node.left.property.name} is undeclared on the class ${classDeclaration.type.typeString} at line ${node.loc.start.line}`, {
         property: node.left.property.name,
-        class: classDeclaration.type.typeString
+        class: classDeclaration.type.typeString,
+        start: {
+          line: node.loc.start.line,
+          column: node.loc.start.column
+        },
+        end: {
+          line: node.loc.end.line,
+          column: node.loc.end.column
+        }
       })]);
     }
 
-    const error = this._testTypes(classPropertyDef, this._findTypeForNode(node.right), node.loc.start.line);
+    const error = this._testTypes(classPropertyDef, this._findTypeForNode(node.right), node);
 
     return (error && errors.concat([error])) || errors;
   }
@@ -288,7 +304,7 @@ export class TDTypeChecker {
     const functionReturnType = new TDType(node.tdType && node.tdType.typeList[node.tdType.typeList.length - 1]);
     const bodyReturnType = this._findReturnType(node.body);
 
-    const error = this._testTypes(functionReturnType, bodyReturnType, node.loc.start.line);
+    const error = this._testTypes(functionReturnType, bodyReturnType, node);
 
     return (error && errors.concat([error])) || errors;
   }
@@ -331,7 +347,15 @@ export class TDTypeChecker {
             genericsErrors = genericsErrors.concat([
               new TypeMismatchError(`Generic type '${typeString}' is inconsistent at line ${node.loc.start.line}`, {
                 type1: genericTypes[typeString],
-                type2: argumentDeclarationType.typeList[index]
+                type2: argumentDeclarationType.typeList[index],
+                start: {
+                  line: node.loc.start.line,
+                  column: node.loc.start.column
+                },
+                end: {
+                  line: node.loc.end.line,
+                  column: node.loc.end.column
+                }
               })
             ]);
           } else if (TDType.testForGeneric(typeString)) {
@@ -349,7 +373,7 @@ export class TDTypeChecker {
         genericTypes[paramType.typeString] = argumentDeclarationType.typeString;
       }
 
-      return this._testTypes(paramType, argumentDeclarationType, node.loc.start.line);
+      return this._testTypes(paramType, argumentDeclarationType, node);
     })
     .reduce((a, b) => a.concat(b), [])
     .filter((a) => Boolean(a));
@@ -370,11 +394,19 @@ export class TDTypeChecker {
       this.options.strictClassChecks) {
       return errors.concat([new UndeclaredError(`${node.key.name} was not declared ahead of time on the class ${classDeclaration.type.typeString} at line ${node.loc.start.line}`, {
         method: node.key.name,
-        class: classDeclaration.type.typeString
+        class: classDeclaration.type.typeString,
+        start: {
+          line: node.loc.start.line,
+          column: node.loc.start.column
+        },
+        end: {
+          line: node.loc.end.line,
+          column: node.loc.end.column
+        }
       })]);
     }
 
-    const error = this._testTypes(classMethodDef, node.tdType, node.loc.start.line);
+    const error = this._testTypes(classMethodDef, node.tdType, node);
 
     if (error) {
       errors = errors.concat([error]);
@@ -399,12 +431,20 @@ export class TDTypeChecker {
  * Legacy check methods
  */
 
-  _testTypes(expectedType=TDType.any() /* t:TDType */, actualType=TDType.any() /* t:TDType */, lineNumber /* t:Number */) /* t:TypeMismatchError? */ {
+  _testTypes(expectedType=TDType.any() /* t:TDType */, actualType=TDType.any() /* t:TDType */, node /* t:Node */) /* t:TypeMismatchError? */ {
     if (expectedType.equals(actualType)) {
-      return new TypeMismatchError(`Type mismatch in declaration on line ${lineNumber}`, {
+      return new TypeMismatchError(`Type mismatch in declaration on line ${node.loc.start.line}`, {
         actualType: actualType.typeString,
         expectedType: expectedType.typeString,
-        file: this._ast.file
+        file: this._ast.file,
+        start: {
+          line: node.loc.start.line,
+          column: node.loc.start.column
+        },
+        end: {
+          line: node.loc.end.line,
+          column: node.loc.end.column
+        }
       });
     }
 
@@ -509,7 +549,15 @@ export class TDTypeChecker {
                 genericTypes[typeString] !== argumentDeclarationType.typeList[index]) {
                 throw new TypeMismatchError(`Generic type '${typeString}' is inconsistent at line ${node.loc.start.line}`, {
                   type1: genericTypes[typeString],
-                  type2: argumentDeclarationType.typeList[index]
+                  type2: argumentDeclarationType.typeList[index],
+                  start: {
+                    line: node.loc.start.line,
+                    column: node.loc.start.column
+                  },
+                  end: {
+                    line: node.loc.end.line,
+                    column: node.loc.end.column
+                  }
                 });
               } else if (TDType.testForGeneric(typeString)) {
                 genericTypes[typeString] = argumentDeclarationType.typeList[index];

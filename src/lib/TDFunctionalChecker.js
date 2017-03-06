@@ -105,7 +105,15 @@ export class TDFunctionalChecker {
   _checkImmutability(statement) {
     if (statement.left.type === 'MemberExpression') {
       return [new ImmutableError(`Cannot make assignments to objects on line ${statement.loc.start.line}. Consider using \`Object.assign()\`.`, {
-        file: this._ast.file
+        file: this._ast.file,
+        start: {
+          line: statement.loc.start.line,
+          column: statement.loc.start.column
+        },
+        end: {
+          line: statement.loc.end.line,
+          column: statement.loc.end.column
+        }
       })];
     }
 
@@ -130,7 +138,15 @@ export class TDFunctionalChecker {
       statement.callee.property.name &&
       disallowedArrayMethods.indexOf(statement.callee.property.name) > -1) {
       return [new ImmutableError(`Array.prototype.${statement.callee.property.name} is not allowed on line ${statement.loc.start.line} because it alters an immutable object.`, {
-        file: this._ast.file
+        file: this._ast.file,
+        start: {
+          line: statement.loc.start.line,
+          column: statement.loc.start.column
+        },
+        end: {
+          line: statement.loc.end.line,
+          column: statement.loc.end.column
+        }
       })];
     }
 
@@ -155,7 +171,15 @@ export class TDFunctionalChecker {
 
       if (scopedDeclaration !== nonScopedDeclaration) {
         return [new ScopeAssignmentError(`Cannot make assignments to objects declared outside of scope on line ${statement.loc.start.line}.`, {
-          file: this._ast.file
+          file: this._ast.file,
+          start: {
+            line: statement.loc.start.line,
+            column: statement.loc.start.column
+          },
+          end: {
+            line: statement.loc.end.line,
+            column: statement.loc.end.column
+          }
         })];
       }
     }
