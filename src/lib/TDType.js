@@ -27,7 +27,11 @@ export class TDType {
   }
 
   static testForGeneric(inputString /* t:String */) /* t:Boolean */ {
-    return inputString === inputString.toLowerCase();
+    const splitParts = inputString
+      .split(' ')
+      .map((part) => part.trim());
+
+    return splitParts.some((part) => part === part.toLowerCase());
   }
 
   static any() /* t:TDType */ {
@@ -35,11 +39,21 @@ export class TDType {
   }
 
   get isGeneric() /* t:Boolean */ {
-    return this.typeList.some((type) => type === type.toLowerCase());
+    return this.typeList
+      .map((type) => type.split(' ').map((part) => part.trim()))
+      .reduce((a, b) => a.concat(b), [])
+      .some((part) => part === part.toLowerCase());
   }
 
   get types() /* t:Array TDType */ {
     return this.typeList.map((typeString) => new TDType(typeString));
+  }
+
+  get genericTypes() /* t:Array String */ {
+    return this.typeList
+      .map((type) => type.split(' ').map((part) => part.trim()))
+      .reduce((a, b) => a.concat(b), [])
+      .filter((part) => part === part.toLowerCase());
   }
 
   get typeList() /* t:Array String */{
@@ -61,8 +75,8 @@ export class TDType {
     const matchesGeneric = this.typeList
       .map((typeString, index) => {
         const otherString = otherType.typeList[index] || '';
-        const typeStringIsGeneric = typeString === typeString.toLowerCase();
-        const otherStringIsGeneric = otherString === otherString.toLowerCase();
+        const typeStringIsGeneric = TDType.testForGeneric(typeString);
+        const otherStringIsGeneric = TDType.testForGeneric(otherString);
         const typesExactlyMatch = typeString === otherString;
         const oneTypeContainsTheOther = typeString
           .split('|')

@@ -3,7 +3,7 @@ import { expect } from 'chai';
 import { TDTypeChecker } from '../../lib/TDTypeChecker';
 
 describe('[builtins] Promises', () => {
-  it.only('should be able to detect generic inconsistencies', () => {
+  it.skip('should be able to detect generic inconsistencies', () => {
     const errors = new TDTypeChecker(`
 const p /* t:Promise Number */ = new Promise((resolve, reject) => {
     resolve(2);

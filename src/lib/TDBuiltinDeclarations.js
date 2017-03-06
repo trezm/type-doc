@@ -11,12 +11,12 @@ export const TDBuiltinDeclarations = [
     new TDClassType('NodeModule')
       .addPropertyDeclaration('exports', 'any'),
     'NodeModule'),
-  new TDDeclaration(new TDType('String -> any'), 'require')
-  // new TDDeclaration(new TDType('Promise a'), 'Promise'),
-  // new TDDeclaration(
-  //   new TDClassType('Promise')
-  //     .addMethodDeclaration('constructor', '((a -> Undefined) -> (a -> Undefined) -> a) -> Promise a')
-  //     .addMethodDeclaration('then a b', '(a -> b) -> Promise b')
-  //     .addMethodDeclaration('catch a b', '(a -> b) -> Promise b')
-  // )
+  new TDDeclaration(new TDType('String -> any'), 'require'),
+  new TDDeclaration(new TDType('Promise a'), 'Promise'),
+  new TDDeclaration(
+    new TDClassType('Promise a')
+      .addMethodDeclaration('constructor', '((a -> Undefined) -> (a -> Undefined) -> a) -> Promise a')
+      .addMethodDeclaration('then a b', '(a -> b) -> Promise b')
+      .addMethodDeclaration('catch a b', '(a -> b) -> Promise b')
+  )
 ];

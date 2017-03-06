@@ -87,9 +87,11 @@ export class TDTypeChecker {
         return errors;
       }
       case 'ArrowFunctionExpression': {
-        errors = errors.concat(this._checkNode(node.body && node.body.body || [node.body]));
+        const bodyErrors = (node.body && node.body.body || [node.body])
+          .map((bodyNode) => this._checkNode(bodyNode))
+          .reduce((a, b) => a.concat(b));
 
-        return errors;
+        return errors.concat(bodyErrors);
       }
       case 'FunctionDeclaration': {
         errors = errors.concat(this._checkNode(node.body));
@@ -216,7 +218,6 @@ export class TDTypeChecker {
   }
 
   _checkDeclaratorInitType(node, errors=[]) {
-    debugger;
     if (!node.id || !node.init) {
       return errors;
     }
@@ -451,8 +452,16 @@ export class TDTypeChecker {
         node.left.scope = scope;
         node.right.scope = scope;
         return this._findTypeForExpression(node);
-      case 'NewExpression':
-        return new TDType(node.callee.name);
+      case 'NewExpression': {
+        const declaration = node.scope.findDeclarationForName(node.callee.name);
+        const isAny = declaration && declaration.type.isAny;
+
+        if (isAny || !declaration) {
+          return new TDType(node.callee.name);
+        } else {
+          return declaration.type;
+        }
+      }
       case 'CallExpression':
         /**
          * Okay, so this is a little interesting actually, basically for a call expression the
