@@ -38,7 +38,7 @@ export class TDScopeGenerator {
         scope.initializeBinding();
         scope.initializeThis(declaration);
 
-        existingScope.addDeclaration(declaration);
+        existingScope.addDeclaration(declaration, true);
         node.body.body.forEach((statement) => this._assignDeclarationTypes(statement, scope));
         return;
       }
@@ -77,7 +77,7 @@ export class TDScopeGenerator {
           const imports = this.ast.imports;
           const relevantImport = imports.find((anImport) => anImport.source === node.source);
 
-          new TDScopeGenerator(relevantImport.ast).generate();
+          new TDScopeGenerator(relevantImport.ast).generate(this.ast.scope);
 
           node.specifiers
             .filter((specifier) => specifier.imported || specifier.exported)
@@ -95,7 +95,7 @@ export class TDScopeGenerator {
         const imports = this.ast.imports;
         const relevantImport = imports.find((anImport) => anImport.source === node.source);
 
-        new TDScopeGenerator(relevantImport.ast).generate();
+        new TDScopeGenerator(relevantImport.ast).generate(this.ast.scope);
 
         node.specifiers
           .filter((specifier) => specifier.imported)
@@ -125,7 +125,7 @@ export class TDScopeGenerator {
           const relevantImport = imports.find((anImport) => anImport.source === importName);
 
           if (relevantImport) {
-            new TDScopeGenerator(relevantImport.ast).generate();
+            new TDScopeGenerator(relevantImport.ast).generate(this.ast.scope);
           }
 
           const declaration = this._findImportOrRequireForName(undefined, relevantImport);
@@ -172,7 +172,7 @@ export class TDScopeGenerator {
   }
 
   generate(parentScope /* t:TDScope */) /* t:TDScope */ {
-    this._assignDeclarationTypes(this.ast);
+    this._assignDeclarationTypes(this.ast, parentScope);
   }
 
   /**

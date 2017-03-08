@@ -166,8 +166,8 @@ export class TDFunctionalChecker {
     }
 
     if (identifier) {
-      const scopedDeclaration = statement.scope.findDeclarationForName(identifier, true);
-      const nonScopedDeclaration = statement.scope.findDeclarationForName(identifier, false);
+      const scopedDeclaration = statement.scope.findDeclarationForName(identifier.name, true);
+      const nonScopedDeclaration = statement.scope.findDeclarationForName(identifier.name, false);
 
       if (scopedDeclaration !== nonScopedDeclaration) {
         return [new ScopeAssignmentError(`Cannot make assignments to objects declared outside of scope on line ${statement.loc.start.line}.`, {

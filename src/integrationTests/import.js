@@ -48,6 +48,42 @@ var s /* t:String */ = test
     expect(errors[0].extras.actualType).to.equal('Number');
   });
 
+  it('should respect namespaces across multiple files', () => {
+    const readFileSyncStub = sandbox.stub(fsWrapper, 'readFileSync', (file) => {
+      return {
+        './test1': `
+  /**
+   * class :: someNamespace:TestClass
+   *   aGoodMethod :: String -> String
+   */
+  export class TestClass {
+  constructor() {
+  }
+
+  aGoodMethod(s /* t:String */) /* t:String */ {
+    return s;
+  }
+  }`,
+        './test2': `
+  const example /* t:someNamespace:TestClass */ = new TestClass();
+  example.aBadMethod();
+
+  export const classValue = example;`,
+        './main': `
+  import { TestClass } from './test1';
+  import { classValue } from './test2';
+  `
+      }[file];
+    });
+
+    const errors = new TDTypeChecker('./main').run({
+      strictClassChecks: true
+    });
+
+    expect(errors[0].extras.property).to.equal('aBadMethod');
+    expect(errors[0].extras.class).to.equal('someNamespace:TestClass');
+  });
+
   it('should run tests on the imported files', () => {
     const readFileSyncStub = sandbox.stub(fsWrapper, 'readFileSync', (file) => {
       return {

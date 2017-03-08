@@ -41,7 +41,7 @@ export class TDTypeChecker {
     tdTypeAdapter = new TDTypeAdapter(ast);
     ast = tdTypeAdapter.ast;
     this._ast = ast;
-    new TDScopeGenerator(ast).generate();
+    new TDScopeGenerator(ast).generate(ast.scope);
 
     const importErrors = (ast.imports || [])
       .map((importedTree) => this._checkNode(importedTree.ast))
