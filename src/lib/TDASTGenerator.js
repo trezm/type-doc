@@ -12,12 +12,17 @@ export const DEFAULT_OPTIONS = {
 
 export class TDASTGenerator {
   constructor(entryFile /* t:String */, options=DEFAULT_OPTIONS) {
+    options = Object.assign(Object.assign({}, DEFAULT_OPTIONS), options);
     this._entryFile = entryFile;
 
-    try {
-      this._entryFileContents = fs.readFileSync(entryFile);
-    } catch(e) {
-      this._entryFileContents = this._entryFile;
+    if (options.content) {
+      this._entryFileContents = options.content;
+    } else {
+      try {
+        this._entryFileContents = fs.readFileSync(entryFile);
+      } catch(e) {
+        this._entryFileContents = this._entryFile;
+      }
     }
 
     this._options = options;

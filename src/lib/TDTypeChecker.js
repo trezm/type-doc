@@ -32,7 +32,7 @@ export class TDTypeChecker {
     let tdTypeAdapter;
 
     if (!ast) {
-      const tdAstGenerator = new TDASTGenerator(this._file);
+      const tdAstGenerator = new TDASTGenerator(this._file, this.options);
 
       ast = tdAstGenerator.ast;
       ast.file = resolve(this._file);
