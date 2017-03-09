@@ -7,7 +7,7 @@ let options = {
   isFunctional: false
 };
 
-for (let i = 0; i < process.argv.length; i++) {
+for (let i = 2; i < process.argv.length; i++) {
   switch (process.argv[i]) {
     case '-f':
     case '--functional': {
@@ -25,8 +25,12 @@ for (let i = 0; i < process.argv.length; i++) {
 }
 
 const typeChecker = require('../dist/main').main;
-filesToTest.forEach((file) => typeChecker(entryFile, options.isFunctional, options))
+filesToTest.map((file) => typeChecker(file, options.isFunctional, options))
   .reduce((a, b) => a.concat(b), [])
   .forEach((result) => {
     console.log(result.toString({ colors: true }));
   });
+
+if (process.env.NODE_ENV === 'test') {
+  typeChecker(undefined, false, options);
+}

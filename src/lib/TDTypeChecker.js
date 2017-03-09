@@ -205,6 +205,11 @@ export class TDTypeChecker {
     }
 
     const objectType = this._findTypeForNode(node.object);
+
+    if (!objectType) {
+      return errors;
+    }
+
     if (!functionDeclaration &&
       !objectType.isAny &&
       this.options.strictClassChecks) {
@@ -320,6 +325,9 @@ export class TDTypeChecker {
 
     if (node.callee.type === 'Identifier') {
       functionDeclaration = scope.findDeclarationForName(node.callee.name);
+    } else if (node.callee.type === 'Super') {
+      // TODO: Handle super calls
+      return errors;
     } else if (node.callee.object.type === 'ThisExpression') {
       functionDeclaration = scope.findDeclarationForStaticMember(node.callee);
     } else {
@@ -520,6 +528,9 @@ export class TDTypeChecker {
          */
         if (node.callee.type === 'Identifier') {
           tdDeclaration = scope.findDeclarationForName(node.callee.name);
+        } else if (node.callee.type === 'Super') {
+          // TODO: Handle super calls
+          return errors;
         } else if (node.callee.object.type === 'ThisExpression') {
           tdDeclaration = scope.findDeclarationForStaticMember(node.callee);
         } else {
