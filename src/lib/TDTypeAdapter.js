@@ -145,6 +145,7 @@ export class TDTypeAdapter {
 
         if (param) {
           signature = signature.concat(paramStringMatch[1]);
+          param.tdType = new TDType(paramStringMatch[1]);
         } else {
           console.log('undocumented param:', paramString);
         }

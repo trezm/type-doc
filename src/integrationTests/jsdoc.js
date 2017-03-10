@@ -27,6 +27,25 @@ add(n, s)`).run();
       expect(errors[0].extras.expectedType).to.equal('Number');
       expect(errors[0].extras.actualType).to.equal('String');
     });
+
+    it('should check against argument types', () => {
+      const errors = new TDTypeChecker(`
+/**
+ * Really doesn't do much...
+ *
+ * @param {Number} someNumber - a number
+ * @returns {String} the string of a number
+ */
+function someFunction(someNumber) {
+    const someString /* t:String */ = someNumber;
+    return someString;
+}`).run();
+
+      expect(errors).to.exist;
+      expect(errors.length).to.equal(1);
+      expect(errors[0].extras.expectedType).to.equal('String');
+      expect(errors[0].extras.actualType).to.equal('Number');
+    });
   });
 
   describe('functions as classes', () => {
