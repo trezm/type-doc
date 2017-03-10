@@ -53,142 +53,147 @@ export class TDTypeChecker {
   }
 
   _checkNode(node, errors=[]) {
-    switch (node.type) {
-      case 'MethodDefinition': {
-        errors = errors.concat(this._checkClassNodeSignature(node));
+    try {
+      switch (node.type) {
+        case 'MethodDefinition': {
+          errors = errors.concat(this._checkClassNodeSignature(node));
 
-        return errors.concat(this._checkNode(node.value));
-      }
-      case 'Program':
-        return errors.concat(
-          node
-            .body
-            .map((declarator) => this._checkNode(declarator))
-            .reduce((a, b) => a.concat(b), []));
-      case 'BlockStatement': {
-        return errors.concat(
-          node
-            .body
-            .map((statement) => this._checkNode(statement))
-            .reduce((a, b) => a.concat(b), []));
-      }
-      case 'ClassDeclaration': {
-        return errors.concat(
-          node
-            .body
-            .body
-            .map((statement) => this._checkNode(statement))
-            .reduce((a, b) => a.concat(b), []));
-      }
-      case 'FunctionExpression': {
-        errors = errors.concat(this._checkNode(node.body));
-        errors = errors.concat(this._checkFunctionReturnType(node));
+          return errors.concat(this._checkNode(node.value));
+        }
+        case 'Program':
+          return errors.concat(
+            node
+              .body
+              .map((declarator) => this._checkNode(declarator))
+              .reduce((a, b) => a.concat(b), []));
+        case 'BlockStatement': {
+          return errors.concat(
+            node
+              .body
+              .map((statement) => this._checkNode(statement))
+              .reduce((a, b) => a.concat(b), []));
+        }
+        case 'ClassDeclaration': {
+          return errors.concat(
+            node
+              .body
+              .body
+              .map((statement) => this._checkNode(statement))
+              .reduce((a, b) => a.concat(b), []));
+        }
+        case 'FunctionExpression': {
+          errors = errors.concat(this._checkNode(node.body));
+          errors = errors.concat(this._checkFunctionReturnType(node));
 
-        return errors;
-      }
-      case 'ArrowFunctionExpression': {
-        const bodyErrors = (node.body && node.body.body || [node.body])
-          .map((bodyNode) => this._checkNode(bodyNode))
-          .reduce((a, b) => a.concat(b));
-
-        return errors.concat(bodyErrors);
-      }
-      case 'FunctionDeclaration': {
-        errors = errors.concat(this._checkNode(node.body));
-        errors = errors.concat(this._checkFunctionReturnType(node));
-
-        return errors;
-      }
-      case 'ExportNamedDeclaration': {
-        if (node.declaration) {
-          return errors.concat(this._checkNode(node.declaration));
-        } else {
           return errors;
         }
-      }
-      case 'ImportDeclaration': {
-        return errors;
-      }
-      case 'ImportSpecifier': {
-        return errors;
-      }
-      case 'VariableDeclaration': {
-        return errors.concat(
-          node
-            .declarations
-            .map((declarator) => this._checkNode(declarator))
-            .reduce((a, b) => a.concat(b), []));
-      }
-      case 'VariableDeclarator': {
-        if (node.init &&
-          node.init.callee &&
-          node.init.callee.name === 'require') {
+        case 'ArrowFunctionExpression': {
+          const bodyErrors = (node.body && node.body.body || [node.body])
+            .map((bodyNode) => this._checkNode(bodyNode))
+            .reduce((a, b) => a.concat(b));
 
-        } else if (node.init) {
-          errors = errors.concat(this._checkNode(node.init));
+          return errors.concat(bodyErrors);
         }
+        case 'FunctionDeclaration': {
+          errors = errors.concat(this._checkNode(node.body));
+          errors = errors.concat(this._checkFunctionReturnType(node));
 
-        return errors.concat(this._checkDeclaratorInitType(node));
-      }
-      case 'ReturnStatement': {
-        errors = errors.concat(this._checkNode(node.argument));
-
-        return errors;
-      }
-      case 'BinaryExpression': {
-        errors = errors.concat(this._checkNode(node.left));
-        errors = errors.concat(this._checkNode(node.right));
-
-        return errors;
-      }
-      case 'ExpressionStatement': {
-        return errors.concat(this._checkNode(node.expression));
-      }
-      case 'AssignmentExpression': {
-        errors = errors.concat(this._checkNode(node.left));
-        errors = errors.concat(this._checkNode(node.right));
-
-        return errors
-          .concat(this._checkAssignmentExpressionTypes(node))
-          .concat(this._checkMemberAssignmentType(node));
-      }
-      case 'CallExpression': {
-        /**
-         * Okay, so this is a little interesting actually, basically for a call expression the
-         * callee will either be:
-         *  - An Identifier
-         *  - A MemberExpression
-         *    - For member expressions, they can be infinitely chained
-         *    - A MemberExpression consists of the last property under `property` and then all
-         *        of the preceding access under another MemberExpression under `object`.
-         *    - When both `object` and `property` are identifiers, the chain has ended
-         *
-         * With this in mind, we should be checking the type access of everything in _reverse order_
-         * and passing the type down. In other words, we recursively go through the tree until we reach
-         * (identifier,identifier), test the type, then return the type of the property along with any errors
-         * and continue this process until we return here.
-         */
-
-        // errors = errors.concat(this._checkCallType(node));
-        errors = errors.concat(this._checkCallArgumentTypes(node));
-        errors = errors.concat(this._checkNode(node.callee));
-
-        return errors.concat(
-          node
-            .arguments
-            .map((argument) => this._checkNode(argument))
-            .reduce((a, b) => a.concat(b), []))
-            .filter((val) => Boolean(val));
-      }
-      case 'MemberExpression':
-        if (node.object.type !== 'Identifier') {
-          errors = errors.concat(this._checkNode(node.object));
-          errors = errors.concat(this._checkNode(node.property));
+          return errors;
         }
+        case 'ExportNamedDeclaration': {
+          if (node.declaration) {
+            return errors.concat(this._checkNode(node.declaration));
+          } else {
+            return errors;
+          }
+        }
+        case 'ImportDeclaration': {
+          return errors;
+        }
+        case 'ImportSpecifier': {
+          return errors;
+        }
+        case 'VariableDeclaration': {
+          return errors.concat(
+            node
+              .declarations
+              .map((declarator) => this._checkNode(declarator))
+              .reduce((a, b) => a.concat(b), []));
+        }
+        case 'VariableDeclarator': {
+          if (node.init &&
+            node.init.callee &&
+            node.init.callee.name === 'require') {
 
-        return errors.concat(this._checkMemberExpression(node));
-      default:
-        return errors;
+          } else if (node.init) {
+            errors = errors.concat(this._checkNode(node.init));
+          }
+
+          return errors.concat(this._checkDeclaratorInitType(node));
+        }
+        case 'ReturnStatement': {
+          errors = errors.concat(this._checkNode(node.argument));
+
+          return errors;
+        }
+        case 'BinaryExpression': {
+          errors = errors.concat(this._checkNode(node.left));
+          errors = errors.concat(this._checkNode(node.right));
+
+          return errors;
+        }
+        case 'ExpressionStatement': {
+          return errors.concat(this._checkNode(node.expression));
+        }
+        case 'AssignmentExpression': {
+          errors = errors.concat(this._checkNode(node.left));
+          errors = errors.concat(this._checkNode(node.right));
+
+          return errors
+            .concat(this._checkAssignmentExpressionTypes(node))
+            .concat(this._checkMemberAssignmentType(node));
+        }
+        case 'CallExpression': {
+          /**
+           * Okay, so this is a little interesting actually, basically for a call expression the
+           * callee will either be:
+           *  - An Identifier
+           *  - A MemberExpression
+           *    - For member expressions, they can be infinitely chained
+           *    - A MemberExpression consists of the last property under `property` and then all
+           *        of the preceding access under another MemberExpression under `object`.
+           *    - When both `object` and `property` are identifiers, the chain has ended
+           *
+           * With this in mind, we should be checking the type access of everything in _reverse order_
+           * and passing the type down. In other words, we recursively go through the tree until we reach
+           * (identifier,identifier), test the type, then return the type of the property along with any errors
+           * and continue this process until we return here.
+           */
+
+          // errors = errors.concat(this._checkCallType(node));
+          errors = errors.concat(this._checkCallArgumentTypes(node));
+          errors = errors.concat(this._checkNode(node.callee));
+
+          return errors.concat(
+            node
+              .arguments
+              .map((argument) => this._checkNode(argument))
+              .reduce((a, b) => a.concat(b), []))
+              .filter((val) => Boolean(val));
+        }
+        case 'MemberExpression':
+          if (node.object.type !== 'Identifier') {
+            errors = errors.concat(this._checkNode(node.object));
+            errors = errors.concat(this._checkNode(node.property));
+          }
+
+          return errors.concat(this._checkMemberExpression(node));
+        default:
+          return errors;
+      }
+    } catch (e) {
+      console.error('[TypeDoc]', e);
+      return errors;
     }
   }
 
@@ -612,6 +617,10 @@ export class TDTypeChecker {
       }
       case 'BlockStatement': {
         return this._findReturnType(node);
+      }
+      case 'ObjectExpression': {
+        // TODO: Consider handling more strictly
+        return TDType.any();
       }
       default:
         return;

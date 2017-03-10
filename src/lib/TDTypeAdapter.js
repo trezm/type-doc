@@ -134,7 +134,7 @@ export class TDTypeAdapter {
     });
 
     if (foundType) {
-      const paramStrings = foundType.value.match(JSDOC_PARAMS_REGEX);
+      const paramStrings = foundType.value.match(JSDOC_PARAMS_REGEX) || [];
       const returns = (foundType.value.match(JSDOC_RETURNS_REGEX) || [])[1];
 
       let signature = [];
@@ -210,8 +210,8 @@ export class TDTypeAdapter {
       const memberMatch = foundType.value.match(JSDOC_MEMBEROF_REGEX);
       const memberString = memberMatch && memberMatch[1];
       const globalIdentifier = (memberString ? memberString + '.' : '') + classString;
-
-      node.tdType = new TDClassType(classString);
+      const identifier = memberString ? memberString + ':' + classString : classString;
+      node.tdType = new TDClassType(identifier);
 
       this._globalClasses[globalIdentifier] = node.tdType;
     }

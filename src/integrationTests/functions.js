@@ -186,4 +186,15 @@ messaging.getToken()
     expect(errors).to.exist;
     expect(errors.length).to.equal(0);
   });
+
+  it('should allow a function passed in as an any argument to accept an empty object', () => {
+    const errors = new TDTypeChecker(`
+function f(a) {
+  a({});
+}
+    `).run();
+
+    expect(errors).to.exist;
+    expect(errors.length).to.equal(0);
+  });
 });

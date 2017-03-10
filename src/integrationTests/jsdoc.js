@@ -29,6 +29,23 @@ add(n, s)`).run();
     });
   });
 
+  describe('functions as classes', () => {
+    it('should allow @class to be used with functions', () => {
+      const errors = new TDTypeChecker(`
+/**
+ * Add two Numbers
+ *
+ * @class SomeClass
+ */
+function SomeClass(a, b) {
+
+}`).run();
+
+      expect(errors).to.exist;
+      expect(errors.length).to.equal(0);
+    });
+  });
+
   describe('class methods', () => {
     it('should properly recognize errors using jsdoc types', () => {
       const errors = new TDTypeChecker(`
