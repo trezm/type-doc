@@ -339,6 +339,11 @@ export class TDTypeChecker {
       functionDeclaration = scope.findDeclarationForMember(node.callee);
     }
 
+    // Short circuit, it's probably a call with the type of "Function"
+    if (functionDeclaration && functionDeclaration.type.typeList.length === 1) {
+      return errors;
+    }
+
     const genericTypes = {};
     return functionDeclaration && node.arguments.map((argument, index) => {
       const argumentDeclarationType = this._findTypeForNode(argument, argument.scope || scope);

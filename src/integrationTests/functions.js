@@ -128,6 +128,21 @@ addOne('0', (aString /* t:String */) => aString);
       expect(errors[0].extras.expectedType).to.equal('String -> Number');
       expect(errors[0].extras.actualType).to.equal('String -> String');
     });
+
+    it('should not throw an error if there is a callback', () => {
+      const errors = new TDTypeChecker(`
+/**
+ *
+ * @param {Function} callback - a callback to call
+ */
+function someFunction(callback) {
+    return callback('asdf');
+}
+`).run();
+
+      expect(errors).to.exist;
+      expect(errors.length).to.equal(0);
+    });
   });
 
   describe('in functions should still respect types', () => {
