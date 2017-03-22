@@ -4,8 +4,9 @@ import { TDType } from './TDType';
 
 /**
  * class :: TDClassType
- *   methods :: Array TDDeclaration
- *   properties :: Array TDDeclaration
+ *   methods :: Array TDType
+ *   properties :: Array TDType
+ *   getPropertyTypeForName :: TDDeclaration
  *   addPropertyOrMethod :: String -> String -> TDClassType
  *   addMethodDeclaration :: String -> String -> TDClassType
  *   addPropertyDeclaration :: String -> String -> TDClassType
@@ -46,5 +47,16 @@ export class TDClassType extends TDType {
     this._properties = Object.assign(Object.assign({}, this._properties), { [name]: new TDType(propertyType) });
 
     return this;
+  }
+
+  getPropertyTypeForName(name /* t:String */) /* t:TDType */ {
+    const matchingKey = Object.keys(this.properties)
+      .find((key) => {
+        const keyClassName = key.split(' ')[0];
+
+        return keyClassName === name;
+      });
+
+    return this.properties[matchingKey];
   }
 }

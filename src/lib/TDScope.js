@@ -21,6 +21,17 @@ export class TDScope {
     return Boolean(this.binding);
   }
 
+  updateDeclaration(declaration) {
+    this.declarations = this.declarations
+      .map((existingDeclaration) => {
+        if (existingDeclaration.name === declaration.name) {
+          return declaration;
+        } else {
+          return existingDeclaration;
+        }
+      });
+  }
+
   addDeclaration(declaration /* t:TDDeclaration */, allowNamespace=false) {
     this.declarations.push(declaration);
 
@@ -39,15 +50,28 @@ export class TDScope {
     }
   }
 
-  findDeclarationForName(name /* t:String */, limitScope /* t:boolean */) /* t:TDDeclaration */ {
-    const declaration = this.declarations.find((declaration) => declaration.nonNamespacedName === name);
+  findTypeForName(name /* t:String */, limitScope /* t:Boolean */) /* t:TDType */ {
+    if (!name) {
+      return;
+    }
 
-    return declaration ||
-      !limitScope && this.parent && this.parent.findDeclarationForName(name) ||
-      this.findDeclarationInNamespace(name);
+    const declaration = this.declarations.find((declaration) => {
+      const declarationSplit = declaration.nonNamespacedName.split(' ');
+      const nameSplit = name.split(' ');
+
+      const classNamesAreEqual = declarationSplit[0] === nameSplit[0];
+
+      return classNamesAreEqual;
+    });
+
+    const type = declaration && declaration.type;
+
+    return type ||
+      !limitScope && this.parent && this.parent.findTypeForName(name) ||
+      this.findTypeInNamespace(name);
   }
 
-  findDeclarationInNamespace(name /* t:String */) /* t:TDDeclaration */ {
+  findTypeInNamespace(name /* t:String */) /* t:TDType */ {
     if (!name) {
       return;
     }
@@ -60,83 +84,81 @@ export class TDScope {
     }
 
     if (this.parent) {
-      return this.parent.findDeclarationInNamespace(name);
+      return this.parent.findTypeInNamespace(name);
     } else {
-      return this.namespaces[namespace][keyName];
+      const declaration = this.namespaces[namespace][keyName];
+      return declaration && declaration.type;
     }
-  };
+  }
 
-  findDeclarationForStaticMember(node /* t:Object */) /* t:TDDeclaration */ {
+  findTypeForStaticMember(node /* t:Object */) /* t:TDType */ {
     const propertyName = node.property.name;
 
     switch (node.object.type) {
       case 'ThisExpression': {
         const propertyType = this.this && this.this.type.properties && this.this.type.properties[propertyName];
 
-        return (this.binding && this.binding.findDeclarationForName(propertyName)) ||
-          (propertyType && new TDDeclaration(propertyType, undefined)) ||
-          (this.parent && this.parent.findDeclarationForStaticMember(node));
+        return (this.binding && this.binding.findTypeForName(propertyName)) ||
+          propertyType ||
+          (this.parent && this.parent.findTypeForStaticMember(node));
       }
       default:
         return;
     }
   }
 
-  findDeclarationForMember(node /* t:Object */) /* t:TDDeclaration */ {
+  findTypeForMember(node /* t:Object */) /* t:TDType */ {
     const propertyName = node.property.name;
 
     switch (node.object.type) {
       case 'ThisExpression':
-        return (this.binding && this.binding.findDeclarationForName(propertyName)) ||
-          (this.parent && this.parent.findDeclarationForStaticMember(node));
+        return (this.binding && this.binding.findTypeForName(propertyName)) ||
+          (this.parent && this.parent.findTypeForStaticMember(node));
       case 'MemberExpression': {
-        const objectDeclaration = node.object.scope.findDeclarationForMember(node.object);
-        const classDeclaration = objectDeclaration &&
-          objectDeclaration.type &&
-          node.scope.findDeclarationForName(objectDeclaration.type.typeString);
+        const objectType = node.object.scope.findTypeForMember(node.object);
+        const classType = objectType &&
+          node.scope.findTypeForName(objectType.typeString);
 
-        if (classDeclaration) {
-          return classDeclaration.type.properties[node.property.name];
-        } else if (objectDeclaration && objectDeclaration.type.properties) {
-          return objectDeclaration.type.properties[node.property.name];
+        if (classType) {
+          return classType.properties[node.property.name];
+        } else if (objectType && objectType.properties) {
+          return objectType.properties[node.property.name];
         } else {
-          return objectDeclaration;
+          return objectType;
         }
       }
       case 'Identifier': {
-        let declaration = this.findDeclarationForName(node.object.name);
+        const propertyClassName = node.property.name.split(' ')[0];
+        let type = this.findTypeForName(node.object.name);
+        const originalType = type;
+        let genericMap = {};
 
-        if (declaration &&
-          declaration.type &&
-          !(declaration.type instanceof TDClassType)) {
-          declaration = this.findDeclarationForName(declaration.type.typeString);
+        if (type &&
+          !(type instanceof TDClassType)) {
+          type = this.findTypeForName(type.typeString);
+          genericMap = type.extractGenericMapGivenType(originalType);
         }
 
         /**
          * A little bit of a hack here to wrap a TDType in a declaration like a method.
          */
-        if (declaration &&
-          declaration.type &&
-          declaration.type.properties &&
-          declaration.type.properties[node.property.name]) {
-          let propType = declaration.type.properties[node.property.name];
-          let signature = propType.types
-            .map((type) => type.typeString)
-            .join(' -> ');
+        if (type &&
+          type.getPropertyTypeForName &&
+          type.getPropertyTypeForName(node.property.name)) {
+          let propType = type.getPropertyTypeForName(node.property.name);
 
-          declaration = new TDDeclaration(new TDType(signature), node.property.name);
-        } else if (declaration &&
-          declaration.type &&
-          declaration.type.properties) {
+          type = propType;
+        } else if (type &&
+          type.properties) {
           return undefined;
         }
 
-        return declaration;
+        let alteredTypeString = (type || TDType.any()).typeString;
+        return new TDType(alteredTypeString, genericMap);
       }
       default:
         return;
     }
-
   }
 
   findThisDef() {

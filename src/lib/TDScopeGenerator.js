@@ -21,6 +21,7 @@ export class TDScopeGenerator {
         scope.initializeBinding(tdType);
 
         node.value.params.forEach((param) => {
+          // TODO:Handle param defaults better
           const paramDeclaration = new TDDeclaration(param.tdType, param.name);
           scope.addDeclaration(paramDeclaration);
         });
@@ -49,6 +50,7 @@ export class TDScopeGenerator {
         node.scope = arrowExpressionScope;
         node.params
           .forEach((param) => {
+            // TODO:Handle param defaults better
             arrowExpressionScope.addDeclaration(new TDDeclaration(param.tdType, param.name));
           });
 
@@ -62,6 +64,7 @@ export class TDScopeGenerator {
         scope.initializeBinding(tdType);
 
         node.params.forEach((param) => {
+          // TODO:Handle param defaults better
           const paramDeclaration = new TDDeclaration(param.tdType, param.name);
           scope.addDeclaration(paramDeclaration);
         });
@@ -82,10 +85,10 @@ export class TDScopeGenerator {
           node.specifiers
             .filter((specifier) => specifier.imported || specifier.exported)
             .forEach((specifier) => {
-              const declaration = this._findImportOrRequireForName((specifier.imported || specifier.exported).name, relevantImport);
+              const type = this._findImportOrRequireForName((specifier.imported || specifier.exported).name, relevantImport);
 
-              if (declaration) {
-                existingScope.addDeclaration(new TDDeclaration(declaration.type, specifier.local.name));
+              if (type) {
+                existingScope.addDeclaration(new TDDeclaration(type, specifier.local.name));
               }
             });
         }
@@ -100,10 +103,10 @@ export class TDScopeGenerator {
         node.specifiers
           .filter((specifier) => specifier.imported)
           .forEach((specifier) => {
-            const declaration = this._findImportOrRequireForName(specifier.imported.name, relevantImport);
+            const type = this._findImportOrRequireForName(specifier.imported.name, relevantImport);
 
-            if (declaration) {
-              existingScope.addDeclaration(new TDDeclaration(declaration.type, specifier.local.name));
+            if (type) {
+              existingScope.addDeclaration(new TDDeclaration(type, specifier.local.name));
             }
           });
         return;
@@ -128,10 +131,10 @@ export class TDScopeGenerator {
             new TDScopeGenerator(relevantImport.ast).generate(this.ast.scope);
           }
 
-          const declaration = this._findImportOrRequireForName(undefined, relevantImport);
+          const type = this._findImportOrRequireForName(undefined, relevantImport);
 
-          if (declaration) {
-            existingScope.addDeclaration(new TDDeclaration(declaration.type, node.id.name));
+          if (type) {
+            existingScope.addDeclaration(new TDDeclaration(type, node.id.name));
           }
         } else {
           const tdType = this._searchForNodeType(node);
@@ -212,7 +215,7 @@ export class TDScopeGenerator {
       .body
       .map((statement) => {
         const isTypedES6Export = statement.type === 'ExportNamedDeclaration' &&
-          statement.scope.findDeclarationForName(name);
+          statement.scope.findTypeForName(name);
 
         const isAnExpression = statement.type === 'ExpressionStatement';
         const isAnAssignment = isAnExpression && statement.expression.type === 'AssignmentExpression';
@@ -223,7 +226,7 @@ export class TDScopeGenerator {
         const isLeftJustExports = isLeftAStaticMember &&
           statement.expression.left.object.name === 'exports';
         const isTypedNodeExport = (isLeftModuleDotExports || isLeftJustExports) &&
-          statement.scope.findDeclarationForName(statement.expression.right.name);
+          statement.scope.findTypeForName(statement.expression.right.name);
 
         return isTypedES6Export || isTypedNodeExport;
       })
@@ -422,10 +425,10 @@ export class TDScopeGenerator {
 
         return isLeftModuleDotExports || isLeftJustExports;
       })
-      .map((statement) => statement.scope.findDeclarationForName(statement.expression.right.name));
+      .map((statement) => statement.scope.findTypeForName(statement.expression.right.name));
 
     if (importTypes.length) {
-      requireNode.declarations[0].id.tdType = importTypes[importTypes.length - 1].type;
+      requireNode.declarations[0].id.tdType = importTypes[importTypes.length - 1];
     }
   }
 

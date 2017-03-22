@@ -7,7 +7,7 @@ import {
 } from './TDTypeStringTokenizer';
 
 export class TDType {
-  constructor(typeString='any' /* t:String */) {
+  constructor(typeString='any' /* t:String */, genericMap={} /* t:any */) {
     if (typeString.constructor.name === this.constructor.name) {
       this.isAny = typeString.isAny;
       typeString = typeString.typeString;
@@ -19,11 +19,14 @@ export class TDType {
     if (typeof typeString !== 'string') {
       throw new Error('must be string or TDType');
     }
-    this.typeString = typeString;
-  }
 
-  static generateTypeList(inputString /* t:String */) /* t:Array String */ {
+    let alteredTypeString = typeString;
+    if (!this.isAny) {
+      Object.keys(genericMap)
+        .forEach((key) => alteredTypeString = alteredTypeString.replace(new RegExp(key, 'g'), genericMap[key]));
+    }
 
+    this.typeString = alteredTypeString;
   }
 
   static testForGeneric(inputString /* t:String */) /* t:Boolean */ {
@@ -58,6 +61,27 @@ export class TDType {
 
   get typeList() /* t:Array String */{
     return stringifyAndFlatten(tokenizeString(this.typeString));
+  }
+
+  extractGenericMapGivenType(type /* t:TDType */) /* t:any */ {
+    let genericMap = {};
+
+    this.typeList
+      .forEach((typeString, index) => {
+        const extractingTypeString = type.typeList[index];
+
+        const typeStringParts = typeString.split(' ');
+        const extractingTypeStringParts = extractingTypeString.split(' ');
+
+        typeStringParts
+          .forEach((part, index) => {
+            if (part === part.toLowerCase()) {
+              genericMap[part] = extractingTypeStringParts[index];
+            }
+          });
+      });
+
+    return genericMap;
   }
 
   equals(otherType /* t:TDType */) /* t:Boolean */ {

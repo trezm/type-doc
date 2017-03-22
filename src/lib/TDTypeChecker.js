@@ -5,6 +5,7 @@ import { TDASTGenerator } from './TDASTGenerator';
 import { TDClassType } from './TDClassType';
 import { TDScopeGenerator } from './TDScopeGenerator';
 import { TDTypeAdapter } from './TDTypeAdapter';
+import { TDTypeInferer } from './TDTypeInferer';
 import { TDType } from './TDType';
 import {
   TypeMismatchError,
@@ -42,6 +43,7 @@ export class TDTypeChecker {
     ast = tdTypeAdapter.ast;
     this._ast = ast;
     new TDScopeGenerator(ast).generate(ast.scope);
+    this._ast = TDTypeInferer.run(this._ast);
 
     const importErrors = (ast.imports || [])
       .map((importedTree) => this._checkNode(importedTree.ast))
@@ -169,7 +171,6 @@ export class TDTypeChecker {
            * (identifier,identifier), test the type, then return the type of the property along with any errors
            * and continue this process until we return here.
            */
-
           // errors = errors.concat(this._checkCallType(node));
           errors = errors.concat(this._checkCallArgumentTypes(node));
           errors = errors.concat(this._checkNode(node.callee));
@@ -197,16 +198,17 @@ export class TDTypeChecker {
     }
   }
 
-/**
- * New check methods
- */
+  /**
+   * New check methods
+   */
   _checkMemberExpression(node, errors=[]) {
     let functionDeclaration;
+    let functionType;
 
     if (node.object.type === 'ThisExpression') {
-      functionDeclaration = node.scope.findDeclarationForStaticMember(node);
+      functionType = node.scope.findTypeForStaticMember(node);
     } else {
-      functionDeclaration = node.scope.findDeclarationForMember(node);
+      functionType = node.scope.findTypeForMember(node);
     }
 
     const objectType = this._findTypeForNode(node.object);
@@ -215,7 +217,7 @@ export class TDTypeChecker {
       return errors;
     }
 
-    if (!functionDeclaration &&
+    if (!functionType &&
       !objectType.isAny &&
       this.options.strictClassChecks) {
       return errors.concat([new UndeclaredError(`${node.property.name} is not a declared property of class ${objectType.typeString} on line ${node.loc.start.line}`, {
@@ -249,9 +251,8 @@ export class TDTypeChecker {
     if (node.init &&
       node.init.callee &&
       node.init.callee.name === 'require') {
-      let assignmentDeclaration = node.scope.findDeclarationForName(node.id.name);
       declaratorType = this._findTypeForNode(node.id);
-      assignmentType = (assignmentDeclaration && assignmentDeclaration.tdType) || TDType.any();
+      assignmentType = node.scope.findTypeForName(node.id.name) || TDType.any();
     } else {
       declaratorType = this._findTypeForNode(node.id);
       assignmentType = this._findTypeForNode(node.init);
@@ -327,28 +328,29 @@ export class TDTypeChecker {
   _checkCallArgumentTypes(node, errors=[]) {
     const scope = node.scope;
     let functionDeclaration;
+    let functionType;
 
     if (node.callee.type === 'Identifier') {
-      functionDeclaration = scope.findDeclarationForName(node.callee.name);
+      functionType = scope.findTypeForName(node.callee.name);
     } else if (node.callee.type === 'Super') {
       // TODO: Handle super calls
       return errors;
     } else if (node.callee.object.type === 'ThisExpression') {
-      functionDeclaration = scope.findDeclarationForStaticMember(node.callee);
+      functionType = scope.findTypeForStaticMember(node.callee);
     } else {
-      functionDeclaration = scope.findDeclarationForMember(node.callee);
+      functionType = scope.findTypeForMember(node.callee);
     }
 
     // Short circuit, it's probably a call with the type of "Function"
-    if (functionDeclaration && functionDeclaration.type.typeList.length === 1) {
+    if (functionType && functionType.typeList.length === 1) {
       return errors;
     }
 
     const genericTypes = {};
-    return functionDeclaration && node.arguments.map((argument, index) => {
+    return functionType && node.arguments.map((argument, index) => {
       const argumentDeclarationType = this._findTypeForNode(argument, argument.scope || scope);
-      const paramType = new TDType(functionDeclaration.type.typeList[index]);
-      let genericsErrors = [];
+      const paramType = new TDType(functionType.typeList[index]);
+      let genericsErrors = this._checkNode(argument);
 
       /* Assign any types to generics */
       if (paramType.typeList.length !== argumentDeclarationType.typeList.length) {
@@ -490,37 +492,34 @@ export class TDTypeChecker {
       case 'Literal':
         return new TDType((typeof node.value).capitalize());
       case 'Identifier': {
-        tdDeclaration = scope.findDeclarationForName(node.name);
+        let type = scope.findTypeForName(node.name);
 
-        let classDeclaration = scope.findDeclarationForName(
-          tdDeclaration && tdDeclaration.type && tdDeclaration.type.typeString
+        let classType = scope.findTypeForName(
+          type && type.typeString
         );
 
-        if (classDeclaration &&
-          classDeclaration.type &&
-          !(classDeclaration.type instanceof TDClassType)) {
-          classDeclaration = undefined;
+        if (classType &&
+          !(classType instanceof TDClassType)) {
+          classType = undefined;
         }
 
-        return (classDeclaration && classDeclaration.type) ||
-          (tdDeclaration && tdDeclaration.type) ||
-          TDType.any();
+        return classType || type || TDType.any();
       }
       case 'BinaryExpression':
         node.left.scope = scope;
         node.right.scope = scope;
         return this._findTypeForExpression(node);
       case 'NewExpression': {
-        const declaration = node.scope.findDeclarationForName(node.callee.name);
-        const isAny = declaration && declaration.type.isAny;
+        const type = node.scope.findTypeForName(node.callee.name);
+        const isAny = type && type.isAny;
 
-        if (isAny || !declaration) {
+        if (isAny || !type) {
           return new TDType(node.callee.name);
         } else {
-          return declaration.type;
+          return type;
         }
       }
-      case 'CallExpression':
+      case 'CallExpression': {
         /**
          * Okay, so this is a little interesting actually, basically for a call expression the
          * callee will either be:
@@ -536,28 +535,30 @@ export class TDTypeChecker {
          * (identifier,identifier), test the type, then return the type of the property along with any errors
          * and continue this process until we return here.
          */
+        let type;
+
         if (node.callee.type === 'Identifier') {
-          tdDeclaration = scope.findDeclarationForName(node.callee.name);
+          type = scope.findTypeForName(node.callee.name);
         } else if (node.callee.type === 'Super') {
           // TODO: Handle super calls
           return errors;
         } else if (node.callee.object.type === 'ThisExpression') {
-          tdDeclaration = scope.findDeclarationForStaticMember(node.callee);
+          type = scope.findTypeForStaticMember(node.callee);
         } else {
-          tdDeclaration = scope.findDeclarationForMember(node.callee);
+          type = scope.findTypeForMember(node.callee);
         }
 
-        if (!tdDeclaration) {
+        if (!type) {
           returnType = this._findTypeForNode(node.callee);
         }
 
-        signature = (tdDeclaration && tdDeclaration.type && tdDeclaration.type.typeString.split(' -> ')) ||
+        signature = (type && type.typeString.split(' -> ')) ||
           (returnType && returnType.typeString.split(' -> '));
         returnType = signature && signature.pop();
 
-        tdDeclaration && tdDeclaration.type.typeList.length > 1 && node.arguments.forEach((argument, index) => {
+        type && type.typeList.length > 1 && node.arguments.forEach((argument, index) => {
           const argumentDeclarationType = new TDType(this._findTypeForNode(argument, argument.scope || scope));
-          const paramTypeString = tdDeclaration.type.typeList[index];
+          const paramTypeString = type.typeList[index];
 
           // Should do something with the real tokenizer here.
           paramTypeString
@@ -588,13 +589,14 @@ export class TDTypeChecker {
 
         // Do we need to wrap TDType here...
         return new TDType(this._followGenericChain(genericTypes, returnType) || returnType || TDType.any());
+      }
       case 'ReturnStatement':
         node.argument.scope = scope;
         return this._findTypeForNode(node.argument);
       case 'MemberExpression': {
         if (node.object.type === 'ThisExpression') {
-          const declaration = node.scope.findDeclarationForStaticMember(node);
-          return declaration && declaration.type || TDType.any();
+          const type = node.scope.findTypeForStaticMember(node);
+          return type || TDType.any();
         } else {
           const objectType = this._findTypeForNode(node.object);
 
@@ -604,12 +606,10 @@ export class TDTypeChecker {
             // Note, we're assuming that property is _always_ an Identifier.
             const propertyType = objectType.properties[node.property.name];
 
-            const classDeclaration = scope.findDeclarationForName(
+            const classType = scope.findTypeForName(
               propertyType && propertyType.typeString
             );
-            return (classDeclaration && classDeclaration.type) ||
-              propertyType ||
-              TDType.any();
+            return classType || propertyType || TDType.any();
           } else {
             return objectType;
           }

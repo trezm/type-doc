@@ -122,10 +122,9 @@ export class TDFunctionalChecker {
 
   _checkCallsForKnownSideEffects(statement) {
     const hasCallee = statement.callee && statement.callee.object;
-    const calleeDeclaration = hasCallee && statement.scope.findDeclarationForName(statement.callee.object && statement.callee.object.name);
-    const isCalleeTyped = calleeDeclaration && calleeDeclaration.type;
-    const isCalleeArray = isCalleeTyped && calleeDeclaration.type.typeString.match(/.*\[\]$/);
-    const isInCurrentScope = calleeDeclaration && statement.scope.findDeclarationForName(statement.callee.object.name, true);
+    const calleeType = hasCallee && statement.scope.findTypeForName(statement.callee.object && statement.callee.object.name);
+    const isCalleeArray = calleeType && calleeType.typeString.split(' ')[0] === 'Array';
+    const isInCurrentScope = calleeType && statement.scope.findTypeForName(statement.callee.object.name, true);
     const disallowedArrayMethods = [
       'push',
       'pop',
@@ -166,10 +165,10 @@ export class TDFunctionalChecker {
     }
 
     if (identifier) {
-      const scopedDeclaration = statement.scope.findDeclarationForName(identifier.name, true);
-      const nonScopedDeclaration = statement.scope.findDeclarationForName(identifier.name, false);
+      const scopedType = statement.scope.findTypeForName(identifier.name, true);
+      const nonScopedType = statement.scope.findTypeForName(identifier.name, false);
 
-      if (scopedDeclaration !== nonScopedDeclaration) {
+      if (scopedType !== nonScopedType) {
         return [new ScopeAssignmentError(`Cannot make assignments to objects declared outside of scope on line ${statement.loc.start.line}.`, {
           file: this._ast.file,
           start: {

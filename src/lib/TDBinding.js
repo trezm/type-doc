@@ -13,8 +13,10 @@ export class TDBinding {
     this.variableDeclarations.push(variableDeclaration);
   }
 
-  findDeclarationForName(name /* t:String */) /* t:TDDeclaration */ {
-    return this.methodDeclarations.concat(this.variableDeclarations)
+  findTypeForName(name /* t:String */) /* t:TDDeclaration */ {
+    const declaration = this.methodDeclarations.concat(this.variableDeclarations)
       .find((methodDeclaration) => methodDeclaration.name === name);
+
+    return declaration && declaration.type;
   }
 }

@@ -3,19 +3,18 @@ import { expect } from 'chai';
 import { TDTypeChecker } from '../../lib/TDTypeChecker';
 
 describe('[builtins] Promises', () => {
-  it.skip('should be able to detect generic inconsistencies', () => {
+  it('should be able to detect generic inconsistencies', () => {
     const errors = new TDTypeChecker(`
 const p /* t:Promise Number */ = new Promise((resolve, reject) => {
     resolve(2);
 });
 
 p.then((result) => {
-    const /* t:String */ someResult = result;
+    const someResult /* t:String */ = result;
 });
 `).run();
 
-    console.log('errors:', errors);
-    expect(errors[0].extras.expectedType).to.equal('Number');
-    expect(errors[0].extras.actualType).to.equal('String');
+    expect(errors[0].extras.expectedType).to.equal('String');
+    expect(errors[0].extras.actualType).to.equal('Number');
   });
 });

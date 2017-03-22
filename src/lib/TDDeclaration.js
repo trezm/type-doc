@@ -2,6 +2,15 @@
 
 import { TDType } from './TDType';
 
+/**
+ * class :: TDDeclaration
+ *   type :: TDType
+ *   name :: String
+ *   isNamespaced :: Boolean
+ *   namespace :: String
+ *   nonNamespacedTypeString :: String
+ *   nonNamespacedName :: String
+ */
 export class TDDeclaration {
   constructor(type /* t:TDType */, name /* t:String */) {
     this.type = type || new TDType();
