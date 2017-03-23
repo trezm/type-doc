@@ -42,11 +42,12 @@ export class TDTypeInferer {
 
         break;
       }
+      case 'FunctionExpression':
       case 'ArrowFunctionExpression': {
         const body = node.body && node.body.body || [node.body];
         node.params
           .forEach((param, index) => {
-            const type = param.tdType.isAny ? new TDType(node.tdType.typeList[index]) : param.tdType;
+            const type = (!param.tdType || param.tdType.isAny) ? new TDType(node.tdType.typeList[index]) : param.tdType;
             node.scope.updateDeclaration(new TDDeclaration(type, param.name));
           });
 

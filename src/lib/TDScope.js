@@ -22,14 +22,21 @@ export class TDScope {
   }
 
   updateDeclaration(declaration) {
+    let wasAdded = false;
+
     this.declarations = this.declarations
       .map((existingDeclaration) => {
         if (existingDeclaration.name === declaration.name) {
+          wasAdded = true;
           return declaration;
         } else {
           return existingDeclaration;
         }
       });
+
+    if (!wasAdded) {
+      this.declarations.push(declaration);
+    }
   }
 
   addDeclaration(declaration /* t:TDDeclaration */, allowNamespace=false) {

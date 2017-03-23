@@ -53,6 +53,7 @@ export class TDTypeAdapter {
         node.body.body.forEach((statement) => this._assignDeclarationTypes(statement));
         return;
       }
+      case 'FunctionExpression':
       case 'ArrowFunctionExpression': {
         const body = node.body && node.body.body || [node.body];
         body.forEach((statement) => this._assignDeclarationTypes(statement));

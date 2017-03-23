@@ -482,6 +482,7 @@ export class TDTypeChecker {
     }
 
     switch (node.type) {
+      case 'FunctionExpression':
       case 'ArrowFunctionExpression':
         node.body.scope = scope;
         let arrowFunctionReturn = this._findTypeForNode(node.body);
