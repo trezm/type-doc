@@ -212,4 +212,17 @@ function f(a) {
     expect(errors).to.exist;
     expect(errors.length).to.equal(0);
   });
+
+  it('should be able to handle arrow functions with references to outter scopes', () => {
+    const errors = new TDTypeChecker(`
+let someResult /* t:String */;
+const test = (result) => someResult = result;
+test(4);
+    `).run();
+
+    expect(errors).to.exist;
+    expect(errors.length).to.equal(1);
+    expect(errors[0].extras.expectedType).to.equal('String');
+    expect(errors[0].extras.actualType).to.equal('Number');
+  });
 });

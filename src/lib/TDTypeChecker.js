@@ -506,6 +506,8 @@ export class TDTypeChecker {
 
         return classType || type || TDType.any();
       }
+      case 'AssignmentExpression':
+        return this._findTypeForNode(node.right);
       case 'BinaryExpression':
         node.left.scope = scope;
         node.right.scope = scope;

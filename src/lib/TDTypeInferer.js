@@ -15,7 +15,7 @@ export class TDTypeInferer {
   }
 
   static runOnNode(node /* t:any */) /* t:any */ {
-    switch (node.type) {
+    switch (node && node.type) {
       case 'Program': {
         node.body.forEach((_node) => this.runOnNode(_node));
         break;
@@ -44,18 +44,63 @@ export class TDTypeInferer {
       }
       case 'FunctionExpression':
       case 'ArrowFunctionExpression': {
-        const body = node.body && node.body.body || [node.body];
-        node.params
-          .forEach((param, index) => {
-            const type = (!param.tdType || param.tdType.isAny) ? new TDType(node.tdType.typeList[index]) : param.tdType;
-            node.scope.updateDeclaration(new TDDeclaration(type, param.name));
-          });
+        this._inferTypesInParams(node);
+        this._inferTypesFromBodyAssignments(node);
 
-        body.forEach((statement) => this.runOnNode(statement));
+        const paramTypes = node.params.map((param) => node.scope.findTypeForName(param.name).typeString);
+
+        node.tdType = new TDType(paramTypes.concat([node.tdType.typeList[node.tdType.typeList.length - 1]]).join(' -> '));
         break;
       }
+      case 'VariableDeclaration':
+        node.declarations.forEach((variableDeclarator) => this.runOnNode(variableDeclarator));
+        break;
+      case 'VariableDeclarator':
+        this.runOnNode(node.init);
+        const existingType = node.scope.findTypeForName(node.id && node.id.name);
+
+        if (node.id.type === 'Identifier' &&
+          node.init &&
+          existingType &&
+          existingType.isAny) {
+          node.scope.updateDeclaration(new TDDeclaration(node.init.tdType, node.id.name));
+        }
+        break;
       default:
         // Do nothing
     }
+  }
+
+  static _inferTypesInParams(node) {
+    const body = node.body && node.body.body || [node.body];
+    node.params
+      .forEach((param, index) => {
+        const type = (!param.tdType || param.tdType.isAny) ? new TDType(node.tdType.typeList[index]) : param.tdType;
+        node.scope.updateDeclaration(new TDDeclaration(type, param.name));
+      });
+
+    body.forEach((statement) => this.runOnNode(statement));
+  }
+
+  static _inferTypesFromBodyAssignments(node) {
+    const body = node.body && node.body.body || [node.body];
+
+    body
+      .filter((statement) => statement.type === 'AssignmentExpression')
+      .forEach((assignmentStatement) => {
+        const scope = assignmentStatement.scope;
+        const isLeftIdentifier = assignmentStatement.left.type === 'Identifier';
+        const isRightIdentifier = assignmentStatement.right.type === 'Identifier';
+
+        if (isLeftIdentifier &&
+          isRightIdentifier) {
+          const leftType = scope.findTypeForName(assignmentStatement.left.name);
+          const rightType = scope.findTypeForName(assignmentStatement.right.name);
+
+          if (!leftType.isAny && rightType.isAny) {
+            scope.updateDeclaration(new TDDeclaration(leftType, assignmentStatement.right.name));
+          }
+        }
+      });
   }
 }
