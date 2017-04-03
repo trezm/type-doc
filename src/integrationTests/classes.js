@@ -59,6 +59,29 @@ class TestClass {
     expect(errors[0].extras.actualType).to.equal('Number');
   });
 
+  it('should allow super/subclasses', () => {
+    const errors = new TDTypeChecker(`
+class SuperClass {}
+class SubClass extends SuperClass {}
+
+const someClass /* t:SuperClass */ = new SubClass();
+`).run();
+
+    expect(errors.length).to.equal(0);
+  });
+
+  it('should allow nested super/subclasses', () => {
+    const errors = new TDTypeChecker(`
+class SuperestClass {}
+class SuperClass extends SuperestClass {}
+class SubClass extends SuperClass {}
+
+const someClass /* t:SuperestClass */ = new SubClass();
+`).run();
+
+    expect(errors.length).to.equal(0);
+  });
+
   describe('using ahead of time declaration', () => {
     it('should allow AOT class declaration', () => {
       const errors = new TDTypeChecker(`
@@ -285,6 +308,23 @@ const aString /* t:String */ = example.testClass.aBadMethod(aNumber);
 
       expect(errors[0].extras.property).to.equal('aBadMethod');
       expect(errors[0].extras.class).to.equal('TestClass');
+    });
+
+    it('should allow super/subclasses', () => {
+      const errors = new TDTypeChecker(`
+/**
+ * class :: SuperClass
+ */
+class SuperClass {}
+
+/**
+ * class :: SubClass => SuperClass
+ */
+class SubClass extends SuperClass {}
+const someClass /* t:SuperClass */ = new SubClass();
+`).run();
+
+      expect(errors.length).to.equal(0);
     });
   });
 });

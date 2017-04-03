@@ -24,6 +24,10 @@ export class TDTypeInferer {
         this.runOnNode(node.expression);
         break;
       }
+      case 'ClassDeclaration': {
+        this._assignClassTypesAndSuperTypes(node);
+        break;
+      }
       case 'CallExpression': {
         if (!node.callee ||
           !node.callee.property) {
@@ -68,6 +72,16 @@ export class TDTypeInferer {
         break;
       default:
         // Do nothing
+    }
+  }
+
+  static _assignClassTypesAndSuperTypes(node) {
+    const superType = node.tdType.superType;
+
+    if (superType) {
+      const type = node.scope.findTypeForName(superType.typeString);
+      node.tdType.superType = type;
+      node.tdType.superTypeString = type.typeString;
     }
   }
 

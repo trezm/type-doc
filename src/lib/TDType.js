@@ -8,12 +8,19 @@ import {
 
 export class TDType {
   constructor(typeString='any' /* t:String */, genericMap={} /* t:any */) {
+    let superTypeString;
+
     if (typeString.constructor.name === this.constructor.name) {
       this.isAny = typeString.isAny;
       typeString = typeString.typeString;
-    } else if (typeString === 'any') {
+      superTypeString = typeString.superTypeString;
+    } else if (typeString === 'any' ||
+      typeString === 'Object') {
       this.isAny = true;
       typeString = v4();
+    } else {
+      superTypeString = typeString.split('=>')[1] || superTypeString;
+      typeString = typeString.split('=>')[0];
     }
 
     if (typeof typeString !== 'string') {
@@ -27,6 +34,8 @@ export class TDType {
     }
 
     this.typeString = alteredTypeString;
+    this.superTypeString = superTypeString && superTypeString.trim();
+    this.superType = this.superTypeString && new TDType(this.superTypeString);
   }
 
   static testForGeneric(inputString /* t:String */) /* t:Boolean */ {
@@ -84,7 +93,7 @@ export class TDType {
     return genericMap;
   }
 
-  equals(otherType /* t:TDType */) /* t:Boolean */ {
+  isSubclassOf(otherType /* t:TDType */) /* t:Boolean */ {
     const expectedType /* t:String */ = this.typeList.join(' ');
     const actualType /* t:String */ = otherType.typeList.join(' ');
 
@@ -114,7 +123,8 @@ export class TDType {
       })
       .every((value) => value);
 
-    const isValid = matchesGeneric || isAny || allowsAny;
-    return !isValid;
+    // const isValid = matchesGeneric || isAny || allowsAny;
+    // return !isValid;
+    return matchesGeneric || (isAny || allowsAny) || (this.superType && this.superType.isSubclassOf(otherType));
   }
 }

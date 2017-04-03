@@ -452,7 +452,7 @@ export class TDTypeChecker {
  */
 
   _testTypes(expectedType=TDType.any() /* t:TDType */, actualType=TDType.any() /* t:TDType */, node /* t:Node */) /* t:TypeMismatchError? */ {
-    if (expectedType.equals(actualType)) {
+    if (!actualType.isSubclassOf(expectedType)) {
       return new TypeMismatchError(`Type mismatch in declaration on line ${node.loc.start.line}`, {
         actualType: actualType.typeString,
         expectedType: expectedType.typeString,

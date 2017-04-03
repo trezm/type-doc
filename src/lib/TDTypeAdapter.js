@@ -5,7 +5,7 @@ import { TDScope } from './TDScope';
 import { TDType } from './TDType';
 
 const TYPEDEF_REGEX = /^\s*t:(.+)$/;
-const CLASSDEF_REGEX = /\s*class\s*::\s*[^\s]+\s*/;
+const CLASSDEF_REGEX = /\s*class\s*::\s*[^\s]+(?:\s*=>\s*[^\s]+\s*)*\s*/;
 const CLASSMETHODDEF_REGEX = /^\s\s+[^\s]+\s*::\s*[^\s][^\n]*$/gm;
 const JSDOC_PARAMS_REGEX = /@param\s*\{[^\}]+\}\s*[^\s]+/g;
 const JSDOC_CLASSES_REGEX = /@class\s*([^\s\]]+)/g;
@@ -228,6 +228,9 @@ export class TDTypeAdapter {
     });
 
     if (!foundType) {
+      let typeString = node.id && node.id.name;
+      typeString += node.superClass ? ' => ' + node.superClass.name : '';
+      node.tdType = new TDType(typeString);
       return;
     }
 
