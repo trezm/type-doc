@@ -80,8 +80,11 @@ export class TDTypeInferer {
 
     if (superType) {
       const type = node.scope.findTypeForName(superType.typeString);
-      node.tdType.superType = type;
-      node.tdType.superTypeString = type.typeString;
+
+      if (type) {
+        node.tdType.superType = type;
+        node.tdType.superTypeString = type.typeString;
+      }
     }
   }
 
