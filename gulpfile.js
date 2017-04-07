@@ -2,6 +2,7 @@ const gulp = require('gulp');
 const plugins = require('gulp-load-plugins')();
 const clean = plugins.clean;
 const sequence = require('run-sequence');
+const exec = require('child_process').exec;
 
 gulp.task('build:dev', () => {
   return gulp.src('src/**/*.js')
@@ -10,6 +11,18 @@ gulp.task('build:dev', () => {
       sourceMaps: 'inline'
     }))
     .pipe(gulp.dest('dist'));
+});
+
+gulp.task('build:dev:definitions', ['build:dev'], (done) => {
+  exec('./bin/importLibs.js', (err, stdout, stderr) => {
+    done(err);
+  });
+});
+
+gulp.task('build:prod:definitions', ['build:prod'], (done) => {
+  exec('./bin/importLibs.js', (err, stdout, stderr) => {
+    done(err);
+  });
 });
 
 gulp.task('build:prod', ['clean:source'], () => {
@@ -21,7 +34,7 @@ gulp.task('build:prod', ['clean:source'], () => {
     .pipe(gulp.dest('dist'));
 });
 
-gulp.task('test', ['build:dev'], () => {
+gulp.task('test', ['build:dev', 'build:dev:definitions'], () => {
   return gulp.src(['dist/**/*.spec.js', 'dist/integrationTests/**/*.js'], {
       read: false
     })
@@ -29,7 +42,10 @@ gulp.task('test', ['build:dev'], () => {
     .pipe(plugins.env.set({
       NODE_ENV: 'test'
     }))
-    .pipe(plugins.mocha())
+    .pipe(plugins.mocha({
+      timeout: 10000,
+      profile: true
+    }))
     .once('end', () => {
       process.exit();
     });
@@ -63,3 +79,4 @@ gulp.task('docs', () => {
 });
 
 gulp.task('default', ['build:dev']);
+gulp.task('release', ['build:prod', 'build:prod:defintions']);

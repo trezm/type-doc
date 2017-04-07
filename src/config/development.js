@@ -3,5 +3,6 @@
 import { config as all } from './all';
 
 export const config = Object.assign(all, {
-  logging: true
+  logging: true,
+  silenceProfiler: false
 });

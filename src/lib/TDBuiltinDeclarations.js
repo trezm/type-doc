@@ -14,7 +14,7 @@ export const TDBuiltinDeclarations = [
   new TDDeclaration(new TDType('String -> any'), 'require'),
   new TDDeclaration(
     new TDClassType('Promise a')
-      .addMethodDeclaration('constructor', '((a -> Undefined) -> (a -> Undefined) -> a) -> Promise a')
+      .addMethodDeclaration('constructor', '((a -> any) -> (a -> any) -> a) -> Promise a')
       .addMethodDeclaration('then a b', '(a -> b) -> Promise b')
       .addMethodDeclaration('catch a b', '(a -> b) -> Promise b'),
     'Promise'

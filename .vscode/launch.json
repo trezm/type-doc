@@ -52,8 +52,22 @@
       "sourceMaps": true,
       "stopOnEntry": false,
       "args": [
+        "-t",
+        "10000",
         "dist/integrationTests/**/*.js"
       ],
+      "runtimeExecutable": null
+    },
+    {
+      "name": "Run Declaration Importer",
+      "cwd": "${workspaceRoot}",
+      "type": "node",
+      "request": "launch",
+      "preLaunchTask": "build:dev",
+      "program": "${workspaceRoot}/dist/lib/TDDeclarationImporter.js",
+      "sourceMaps": true,
+      "stopOnEntry": false,
+      "args": [],
       "runtimeExecutable": null
     }
   ]

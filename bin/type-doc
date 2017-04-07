@@ -4,7 +4,8 @@
 let filesToTest = [];
 let options = {
   strictClassCheck: false,
-  isFunctional: false
+  isFunctional: false,
+  showProfiling: false
 };
 
 for (let i = 2; i < process.argv.length; i++) {
@@ -17,6 +18,11 @@ for (let i = 2; i < process.argv.length; i++) {
     case '-s':
     case '--strict-class-check': {
       options.strictClassCheck = true;
+      break;
+    }
+    case '-p':
+    case '--profile': {
+      options.showProfiling = true;
       break;
     }
     default:

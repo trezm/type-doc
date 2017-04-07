@@ -10,7 +10,7 @@ export class TDType {
   constructor(typeString='any' /* t:String */, genericMap={} /* t:any */) {
     let superTypeString;
 
-    if (typeString.constructor.name === this.constructor.name) {
+    if (typeString instanceof this.constructor) {
       this.isAny = typeString.isAny;
       typeString = typeString.typeString;
       superTypeString = typeString.superTypeString;

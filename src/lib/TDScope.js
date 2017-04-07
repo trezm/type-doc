@@ -3,17 +3,39 @@
 import { TDBinding } from './TDBinding';
 import { TDClassType } from './TDClassType';
 import { TDDeclaration } from './TDDeclaration';
-import { TDBuiltinDeclarations } from './TDBuiltinDeclarations';
 import { TDType } from './TDType';
+import { config } from './TDConfigSingleton';
+import { addDefinitionFileToScope } from './TDDeclarationImporter';
+
+function _split(someString /* t:String */) /* t:Array String */ {
+  const split = someString.split(/\s+/);
+
+  let joinableIndices = [];
+  let currentIndices = split;
+  split.forEach((val, index) => val === '|' && (joinableIndices = joinableIndices.concat([index])));
+  joinableIndices.forEach((index) => {
+    const joinableIndicesHead = joinableIndices.slice(0, index - 1);
+    const joinableIndicesToBeCombined = joinableIndices.slice(index - 1, index + 1);
+    const joinableIndicesTail = joinableIndices.slice(index + 1);
+
+    currentIndices = joinableIndices
+      .concat(joinableIndicesToBeCombined.join(' | '))
+      .concat(joinableIndicesTail);
+  });
+
+  return currentIndices;
+}
 
 export class TDScope {
   constructor(parent /* t:TDScope */) {
     this.parent = parent;
-    this.declarations = [];
+    this.declarations = {};
     this.namespaces = {};
 
     if (!parent) {
-      this.declarations = this.declarations.concat(TDBuiltinDeclarations);
+      addDefinitionFileToScope(this, '../lib.json');
+
+      (config.definitionFiles || []).forEach((file) => addDefinitionFileToScope(this, file));
     }
   }
 
@@ -24,23 +46,13 @@ export class TDScope {
   updateDeclaration(declaration) {
     let wasAdded = false;
 
-    this.declarations = this.declarations
-      .map((existingDeclaration) => {
-        if (existingDeclaration.name === declaration.name) {
-          wasAdded = true;
-          return declaration;
-        } else {
-          return existingDeclaration;
-        }
-      });
-
-    if (!wasAdded) {
-      this.declarations.push(declaration);
-    }
+    const declarationSplit = _split(declaration.nonNamespacedName);
+    this.declarations[declarationSplit[0]] = declaration;
   }
 
   addDeclaration(declaration /* t:TDDeclaration */, allowNamespace=false) {
-    this.declarations.push(declaration);
+    const declarationSplit = _split(declaration.nonNamespacedName);
+    this.declarations[declarationSplit[0]] = declaration;
 
     if (declaration.isNamespaced && allowNamespace) {
       this.addDeclarationToNamespace(declaration);
@@ -62,14 +74,8 @@ export class TDScope {
       return;
     }
 
-    const declaration = this.declarations.find((declaration) => {
-      const declarationSplit = declaration.nonNamespacedName.split(' ');
-      const nameSplit = name.split(' ');
-
-      const classNamesAreEqual = declarationSplit[0] === nameSplit[0];
-
-      return classNamesAreEqual;
-    });
+    const nameSplit = _split(name);
+    const declaration = this.declarations[nameSplit[0]];
 
     const type = declaration && declaration.type;
 

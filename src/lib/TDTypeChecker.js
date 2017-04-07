@@ -11,13 +11,16 @@ import {
   TypeMismatchError,
   UndeclaredError
 } from '../errors';
+import { config } from './TDConfigSingleton';
+import { profile } from './TDProfiler';
 
 String.prototype.capitalize = function() {
   return this.charAt(0).toUpperCase() + this.slice(1);
 };
 
 const DEFAULT_OPTIONS = {
-  strictClassChecks: false
+  strictClassChecks: false,
+  silenceProfiler: true
 };
 
 export class TDTypeChecker {
@@ -27,6 +30,10 @@ export class TDTypeChecker {
   }
 
   run(options=DEFAULT_OPTIONS) {
+    options = Object.assign({}, Object.assign({}, DEFAULT_OPTIONS), options);
+    Object.getOwnPropertyNames(options).forEach((key) => config[key] = options[key]);
+
+    profile();
     this.options = Object.assign(Object.assign({}, DEFAULT_OPTIONS), options);
 
     let ast = this._ast;
@@ -38,12 +45,19 @@ export class TDTypeChecker {
       ast = tdAstGenerator.ast;
       ast.file = resolve(this._file);
     }
+    profile('AST Generation', options.showProfiling);
 
     tdTypeAdapter = new TDTypeAdapter(ast);
     ast = tdTypeAdapter.ast;
     this._ast = ast;
+
+    profile('Type Adaptation', options.showProfiling);
     new TDScopeGenerator(ast).generate(ast.scope);
+
+    profile('Scope Generation', options.showProfiling);
     this._ast = TDTypeInferer.run(this._ast);
+
+    profile('Type Inference', options.showProfiling);
 
     const importErrors = (ast.imports || [])
       .map((importedTree) => this._checkNode(importedTree.ast))
@@ -51,6 +65,7 @@ export class TDTypeChecker {
 
     let newErrors = importErrors.concat(this._checkNode(ast, []));
 
+    profile('Type Checking', options.showProfiling);
     return newErrors;
   }
 
@@ -504,7 +519,10 @@ export class TDTypeChecker {
           classType = undefined;
         }
 
-        return classType || type || TDType.any();
+        if (type && !type.isGeneric && classType && classType.isGeneric) { return type; }
+        if (classType) { return classType; }
+        if (type) { return type; }
+        return TDType.any();
       }
       case 'AssignmentExpression':
         return this._findTypeForNode(node.right);
@@ -629,6 +647,9 @@ export class TDTypeChecker {
       case 'ObjectExpression': {
         // TODO: Consider handling more strictly
         return TDType.any();
+      }
+      case 'ArrayExpression': {
+        return new TDType('Array any');
       }
       default:
         return;

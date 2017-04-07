@@ -2,7 +2,7 @@ import { stub } from 'sinon';
 import { expect } from 'chai';
 import { TDTypeChecker } from '../../lib/TDTypeChecker';
 
-describe('[builtins] Promises', () => {
+describe('[declarations] Promises', () => {
   it('should be able to detect generic inconsistencies with arrow expressions', () => {
     const errors = new TDTypeChecker(`
 const p /* t:Promise Number */ = new Promise((resolve, reject) => {

@@ -38,13 +38,13 @@ export class TDClassType extends TDType {
   }
 
   addMethodDeclaration(name /* t:String */, methodSignature /* t:String */) /* t:TDClassType */ {
-    this._methods = Object.assign(Object.assign({}, this._methods), { [name]: new TDType(methodSignature) });
+    this._methods[name] = new TDType(methodSignature);
 
     return this;
   }
 
   addPropertyDeclaration(name /* t:String */, propertyType /* t:String */) /* t:TDClassType */ {
-    this._properties = Object.assign(Object.assign({}, this._properties), { [name]: new TDType(propertyType) });
+    this._properties[name] = new TDType(propertyType);
 
     return this;
   }
