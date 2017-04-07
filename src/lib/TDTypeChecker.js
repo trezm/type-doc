@@ -70,6 +70,11 @@ export class TDTypeChecker {
   }
 
   _checkNode(node, errors=[]) {
+    // TODO: Short circuit if for some reason there is no
+    if (!node) {
+      return errors;
+    }
+
     try {
       switch (node.type) {
         case 'MethodDefinition': {
@@ -363,7 +368,8 @@ export class TDTypeChecker {
 
     const genericTypes = {};
     return functionType && node.arguments.map((argument, index) => {
-      const argumentDeclarationType = this._findTypeForNode(argument, argument.scope || scope);
+      // TODO: Short circuit if for some reason there is no argumentDeclarationType
+      const argumentDeclarationType = this._findTypeForNode(argument, argument.scope || scope) || TDType.any();
       const paramType = new TDType(functionType.typeList[index]);
       let genericsErrors = this._checkNode(argument);
 
@@ -486,7 +492,7 @@ export class TDTypeChecker {
     return;
   }
 
-  _findTypeForNode(node, scope=node.scope) {
+  _findTypeForNode(node, scope) {
     let tdDeclaration;
     let signature;
     let returnType;
@@ -494,6 +500,8 @@ export class TDTypeChecker {
 
     if (!node) {
       return;
+    } else {
+      scope = scope || node.scope;
     }
 
     switch (node.type) {
@@ -612,7 +620,8 @@ export class TDTypeChecker {
         return new TDType(this._followGenericChain(genericTypes, returnType) || returnType || TDType.any());
       }
       case 'ReturnStatement':
-        node.argument.scope = scope;
+        // TODO: Short circuit if for some reason there is no
+        node.argument && (node.argument.scope = scope);
         return this._findTypeForNode(node.argument);
       case 'MemberExpression': {
         if (node.object.type === 'ThisExpression') {

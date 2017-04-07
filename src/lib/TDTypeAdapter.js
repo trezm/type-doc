@@ -30,6 +30,10 @@ export class TDTypeAdapter {
   }
 
   _assignDeclarationTypes(node) {
+    if (!node) {
+      return;
+    }
+
     switch (node.type) {
       case 'MethodDefinition': {
         node.value.body.body.forEach((statement) => this._assignDeclarationTypes(statement));

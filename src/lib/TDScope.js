@@ -48,6 +48,11 @@ export class TDScope {
   }
 
   updateDeclaration(declaration) {
+    // TODO: Short circuit if for some reason there is no declaration
+    if (!declaration.name) {
+      return;
+    }
+
     let wasAdded = false;
 
     const declarationSplit = _split(declaration.nonNamespacedName);
@@ -55,6 +60,11 @@ export class TDScope {
   }
 
   addDeclaration(declaration /* t:TDDeclaration */, allowNamespace=false) {
+    // TODO: Short circuit if for some reason there is no declaration
+    if (!declaration.name) {
+      return;
+    }
+
     const declarationSplit = _split(declaration.nonNamespacedName);
     this.declarations[declarationSplit[0]] = declaration;
 

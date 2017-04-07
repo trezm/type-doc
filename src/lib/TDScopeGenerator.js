@@ -10,6 +10,11 @@ export class TDScopeGenerator {
   }
 
   _assignDeclarationTypes(node, existingScope=new TDScope()) {
+    // TODO: Short circuit if for some reason there is no node
+    if (!node) {
+      return;
+    }
+
     node.scope = existingScope;
 
     switch (node.type) {
