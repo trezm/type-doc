@@ -8,6 +8,10 @@ import { config } from './TDConfigSingleton';
 import { addDefinitionFileToScope } from './TDDeclarationImporter';
 
 function _split(someString /* t:String */) /* t:Array String */ {
+  if (!someString) {
+    debugger;
+  }
+
   const split = someString.split(/\s+/);
 
   let joinableIndices = [];
@@ -147,7 +151,8 @@ export class TDScope {
         let genericMap = {};
 
         if (type &&
-          !(type instanceof TDClassType)) {
+          !(type instanceof TDClassType) &&
+          !type.isAny) {
           type = this.findTypeForName(type.typeString);
           genericMap = type.extractGenericMapGivenType(originalType);
         }

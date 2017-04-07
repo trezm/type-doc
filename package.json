@@ -1,6 +1,6 @@
 {
   "name": "type-doc",
-  "version": "0.1.21",
+  "version": "0.1.23",
   "description": "Static typechecking in valid javascript",
   "main": "dist/main.js",
   "bin": {
@@ -9,7 +9,7 @@
   "scripts": {
     "docs": "gulp docs && node docs/src/server/server.js",
     "docs:devtool": "gulp docs && node_modules/.bin/devtool docs/src/server/server.js",
-    "prepublish": "./node_modules/.bin/gulp release",
+    "prepublish": "gulp release",
     "test": "gulp test",
     "start": "gulp; node dist/main.js",
     "setup": "gulp build:dev; ./bin/build-parser.sh; gulp build:dev"
@@ -20,7 +20,8 @@
     "body-parser": "1.15.2",
     "chalk": "1.1.3",
     "esprima": "3.1.0",
-    "node-uuid": "1.4.7"
+    "node-uuid": "1.4.7",
+    "typescript": "2.2.2"
   },
   "devDependencies": {
     "babel-preset-es2015": "6.14.0",
@@ -38,5 +39,17 @@
     "mocha": "3.0.2",
     "run-sequence": "1.2.2",
     "sinon": "1.17.5"
-  }
+  },
+  "directories": {
+    "doc": "docs",
+    "example": "examples"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/trezm/type-doc.git"
+  },
+  "bugs": {
+    "url": "https://github.com/trezm/type-doc/issues"
+  },
+  "homepage": "https://github.com/trezm/type-doc#readme"
 }

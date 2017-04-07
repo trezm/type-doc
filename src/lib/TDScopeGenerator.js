@@ -65,7 +65,7 @@ export class TDScopeGenerator {
 
         node.params.forEach((param) => {
           // TODO:Handle param defaults better
-          const paramDeclaration = new TDDeclaration(param.tdType, param.name);
+          const paramDeclaration = new TDDeclaration(this._searchForNodeType(param), param.name || param.left.name);
           scope.addDeclaration(paramDeclaration);
         });
 
@@ -197,6 +197,10 @@ export class TDScopeGenerator {
       case 'MethodDefinition':
       case 'VariableDeclarator':
         return node.tdType;
+      case 'Literal':
+        return new TDType((typeof node.value).capitalize());
+      case 'AssignmentPattern':
+        return this._searchForNodeType(node.right);
       default:
         return undefined;
     }

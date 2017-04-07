@@ -79,4 +79,4 @@ gulp.task('docs', () => {
 });
 
 gulp.task('default', ['build:dev']);
-gulp.task('release', ['build:prod', 'build:prod:defintions']);
+gulp.task('release', ['build:prod', 'build:prod:definitions']);
