@@ -18,7 +18,7 @@ class TDDeclarationNode {
   constructor(
     nodeType /* t:String */,
     properties=[] /* t:Array TDDeclarationNode */,
-    name=undefined /* t:String */,
+    name /* t:String */,
     referencedASTs=[] /* t:Array TDDeclarationNode */,
     typeString=undefined /* t:String */,
     namespace=undefined)
@@ -32,6 +32,7 @@ class TDDeclarationNode {
   }
 }
 
+const KEY_MAP = _generateNumberToKeyMap();
 generateASTFromPath(__dirname + '/../../node_modules/typescript/lib/lib.d.ts');
 
 export function generateASTFromPath(path /* t:String */) /* t:Array TDDeclarationNode */ {
@@ -221,6 +222,14 @@ function _typeStringFromKind(kind /* t:Number */, typeParameters /* t:any */) /*
   }
 }
 
+function _generateNumberToKeyMap() {
+  const keyMap = {};
+
+  Object.keys(ts.SyntaxKind).forEach((key) => keyMap[ts.SyntaxKind[key]] = key);
+
+  return keyMap;
+}
+
 function _getKindFromEnum(kind /* t:Number */) /* t:String */ {
-  return Object.keys(ts.SyntaxKind).find((key) => ts.SyntaxKind[key] === kind);
+  return KEY_MAP[kind];
 }

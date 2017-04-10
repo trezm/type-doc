@@ -25,12 +25,21 @@ for (let i = 2; i < process.argv.length; i++) {
       options.showProfiling = true;
       break;
     }
+    case '-l':
+    case '--lib':
+      options.declarationFiles = (options.declarationFiles || []).concat([process.argv[i + 1]]);
+      i++;
+      break;
     default:
       filesToTest = filesToTest.concat(process.argv[i]);
   }
 }
 
+const profile = require('../dist/lib/TDProfiler').profile;
+profile();
+
 const typeChecker = require('../dist/main').main;
+
 filesToTest.map((file) => typeChecker(file, options.isFunctional, options))
   .reduce((a, b) => a.concat(b), [])
   .forEach((result) => {

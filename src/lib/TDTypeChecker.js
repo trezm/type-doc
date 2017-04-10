@@ -33,7 +33,6 @@ export class TDTypeChecker {
     options = Object.assign({}, Object.assign({}, DEFAULT_OPTIONS), options);
     Object.getOwnPropertyNames(options).forEach((key) => config[key] = options[key]);
 
-    profile();
     this.options = Object.assign(Object.assign({}, DEFAULT_OPTIONS), options);
 
     let ast = this._ast;

@@ -10,6 +10,7 @@
     "docs": "gulp docs && node docs/src/server/server.js",
     "docs:devtool": "gulp docs && node_modules/.bin/devtool docs/src/server/server.js",
     "prepublish": "gulp release",
+    "profile": "",
     "test": "gulp test",
     "start": "gulp; node dist/main.js",
     "setup": "gulp build:dev; ./bin/build-parser.sh; gulp build:dev"
@@ -26,7 +27,6 @@
   "devDependencies": {
     "babel-preset-es2015": "6.14.0",
     "chai": "3.5.0",
-    "devtool": "2.2.0",
     "gulp": "3.9.1",
     "gulp-babel": "6.1.2",
     "gulp-clean": "0.3.2",

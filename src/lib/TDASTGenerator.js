@@ -10,6 +10,7 @@ export const DEFAULT_OPTIONS = {
   sourceType: 'module'
 };
 
+const astCache = {};
 export class TDASTGenerator {
   constructor(entryFile /* t:String */, options=DEFAULT_OPTIONS) {
     options = Object.assign(Object.assign({}, DEFAULT_OPTIONS), options);
@@ -26,6 +27,7 @@ export class TDASTGenerator {
     }
 
     this._options = options;
+    this._ast;
   }
 
   /**
@@ -35,6 +37,10 @@ export class TDASTGenerator {
    */
   get ast() /* t:Object */ {
     let rootAst /* t:Object */;
+
+    if (this._ast) {
+      return this._ast;
+    }
 
     try {
       rootAst = parse(this._entryFileContents, this._options);
@@ -58,6 +64,7 @@ export class TDASTGenerator {
       };
     }
 
+    this._ast = rootAst;
     return rootAst;
   }
 
@@ -102,9 +109,10 @@ export class TDASTGenerator {
 
     importList = importList
       .map((_import) => {
-        const astGenerator = new TDASTGenerator(
-          pathArray.concat([_import.source.value.replace(/^\.\//, '')]).join('/')
-        );
+        const path = pathArray.concat([_import.source.value.replace(/^\.\//, '')]).join('/');
+        // let astGenerator = astCache[resolve(path)] = astCache[resolve(path)] || new TDASTGenerator(path);
+        let astGenerator = /*astCache[resolve(path)] = astCache[resolve(path)] ||*/ new TDASTGenerator(path);
+
         return {
           astGenerator: astGenerator,
           ast: astGenerator.ast,
