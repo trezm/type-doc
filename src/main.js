@@ -4,7 +4,7 @@ import { TDFunctionalChecker } from './lib/TDFunctionalChecker';
 import { TDTypeChecker } from './lib/TDTypeChecker';
 import { profile } from './lib/TDProfiler';
 
-profile('TypeDoc source parsing', true);
+profile('TypeDoc source parsing', false);
 export function main(entryFile='./src/lib/TDScope', checkFunctional=false, options) {
   profile('TypeDoc main calling', options.showProfiling);
   const tdTypeChecker = new TDTypeChecker(entryFile);

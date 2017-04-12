@@ -1,5 +1,5 @@
 {
-  "vsicons.presets.angular": true,
+  "vsicons.presets.angular": false,
   "typeDocServer.definitionFiles": [
     "./src/integrationTests/test.d.ts"
   ]

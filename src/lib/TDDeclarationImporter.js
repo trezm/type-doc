@@ -1,5 +1,6 @@
 'use strict';
 
+import { resolve } from 'path';
 import { readFileSync } from 'fs';
 import * as ts from 'typescript';
 import { TDDeclaration } from './TDDeclaration';
@@ -33,8 +34,12 @@ class TDDeclarationNode {
 }
 
 const KEY_MAP = _generateNumberToKeyMap();
-generateASTFromPath(__dirname + '/../../node_modules/typescript/lib/lib.d.ts');
 
+// console.log('starting');
+// generateASTFromPath(__dirname + '/../../../consumer-web/typings/tsd.d.ts');
+// console.log('done');
+
+let cachedASTs = {};
 export function generateASTFromPath(path /* t:String */) /* t:Array TDDeclarationNode */ {
   let referencedASTs;
 
@@ -44,7 +49,13 @@ export function generateASTFromPath(path /* t:String */) /* t:Array TDDeclaratio
     const directory = path.split('/').slice(0, path.split('/').length - 1).join('/') || '.';
     const sourceFile = ts.createSourceFile(path, readFileSync(path).toString(), ts.ScriptTarget.ES2015, true);
 
-    referencedASTs = sourceFile.referencedFiles.map((fileReference) => generateASTFromPath(`${directory}/${fileReference.fileName}`));
+    referencedASTs = sourceFile
+      .referencedFiles
+      .filter((fileReference) => !(cachedASTs || (cachedASTs = {}))[resolve(`${directory}/${fileReference.fileName}`)])
+      .map((fileReference) => {
+        cachedASTs[resolve(`${directory}/${fileReference.fileName}`)] = true;
+        return generateASTFromPath(resolve(`${directory}/${fileReference.fileName}`));
+      });
     return generateASTFromSourceFile(sourceFile, referencedASTs);
   }
 }
@@ -113,6 +124,7 @@ function _deconstructSourceFile(node, namespace=undefined) /* t:TDDeclarationNod
         namespace
       );
     case 'InterfaceDeclaration':
+    case 'ClassDeclaration':
       return new TDDeclarationNode(
         'Interface',
         node.members
@@ -129,6 +141,7 @@ function _deconstructSourceFile(node, namespace=undefined) /* t:TDDeclarationNod
           .filter((member) => _typeStringFromKind(member.kind) !== 'IndexSignature')
           .filter((member) => _typeStringFromKind(member.kind) !== 'ConstructSignature')
           .filter((member) => _typeStringFromKind(member.kind) !== 'CallSignature')
+          .filter((member) => _typeStringFromKind(member.kind) !== 'Constructor')
           .map((member) => {
             const typeString = _makeType(member);
             return new TDDeclarationNode(
@@ -148,9 +161,11 @@ function _deconstructSourceFile(node, namespace=undefined) /* t:TDDeclarationNod
       return node.body.statements
         .map((_node) => _deconstructSourceFile(_node, node.name.text))
         .reduce((a, b) => a.concat(b), []);
-    case 'TypeAliasDeclaration':
     case 'EndOfFileToken':
-      // Don't handle this for now
+    // Don't handle this for now
+    case 'TypeAliasDeclaration':
+    case 'ImportDeclaration':
+    case 'ExportAssignment':
       return undefined;
     default:
       throw new Error(`Unknown node type: ${kind}`);
