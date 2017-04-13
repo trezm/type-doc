@@ -8,10 +8,6 @@ import { config } from './TDConfigSingleton';
 import { addDefinitionFileToScope } from './TDDeclarationImporter';
 
 function _split(someString /* t:String */) /* t:Array String */ {
-  if (!someString) {
-    debugger;
-  }
-
   const split = someString.split(/\s+/);
 
   let joinableIndices = [];
@@ -138,6 +134,8 @@ export class TDScope {
     const propertyName = node.property.name;
 
     switch (node.object.type) {
+      case 'NewExpression':
+        return this.findTypeForName(node.object.callee.name);
       case 'ThisExpression':
         return (this.binding && this.binding.findTypeForName(propertyName)) ||
           (this.parent && this.parent.findTypeForStaticMember(node));
@@ -152,6 +150,16 @@ export class TDScope {
           return objectType.properties[node.property.name];
         } else {
           return objectType;
+        }
+      }
+      case 'CallExpression': {
+        const propertyClassName = node.property.name.split(' ')[0];
+        let type = this.findTypeForMember(node.object.callee);
+
+        if (!type.getPropertyTypeForName) {
+          return TDType.any();
+        } else {
+          return type.getPropertyTypeForName(propertyName);
         }
       }
       case 'Identifier': {

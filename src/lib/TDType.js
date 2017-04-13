@@ -68,8 +68,12 @@ export class TDType {
       .filter((part) => part === part.toLowerCase());
   }
 
-  get typeList() /* t:Array String */{
+  get typeList() /* t:Array String */ {
     return stringifyAndFlatten(tokenizeString(this.typeString));
+  }
+
+  get isOptional() /* t:Boolean */ {
+    return /^\[.*\]$/.test(this.typeString);
   }
 
   extractGenericMapGivenType(type /* t:TDType */) /* t:any */ {
@@ -110,7 +114,7 @@ export class TDType {
         const otherString = otherType.typeList[index] || '';
         const typeStringIsGeneric = TDType.testForGeneric(typeString);
         const otherStringIsGeneric = TDType.testForGeneric(otherString);
-        const typesExactlyMatch = typeString === otherString;
+        const typesExactlyMatch = typeString === otherString.replace(/^\[/, '').replace(/\]$/, '');
         const oneTypeContainsTheOther = typeString
           .split('|')
           .map((aType) => aType.trim())

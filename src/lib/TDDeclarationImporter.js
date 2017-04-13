@@ -35,9 +35,9 @@ class TDDeclarationNode {
 
 const KEY_MAP = _generateNumberToKeyMap();
 
-// console.log('starting');
-// generateASTFromPath(__dirname + '/../../../consumer-web/typings/tsd.d.ts');
-// console.log('done');
+console.log('starting');
+generateASTFromPath(__dirname + '/../../node_modules/typescript/lib/lib.d.ts');
+console.log('done');
 
 let cachedASTs = {};
 export function generateASTFromPath(path /* t:String */) /* t:Array TDDeclarationNode */ {
@@ -76,6 +76,10 @@ export function generateASTFromSourceFile(sourceFile, referencedASTs /* t:Array 
 export function addDefinitionFileToScope(scope /* t:TDScope */, path /* t:String */) /* t:TDScope */ {
   const ast = generateASTFromPath(path);
   ast.forEach((node) => {
+      if (!node) {
+        return;
+      }
+
       switch (node.nodeType) {
         case 'Interface':
           const tdClass = new TDClassType(node.typeString);
@@ -99,15 +103,21 @@ function _deconstructSourceFile(node, namespace=undefined) /* t:TDDeclarationNod
   switch(kind) {
     case 'VariableStatement':
       return node.declarationList.declarations.map((declaration) => {
-        const typeString = _typeStringFromKind(declaration.type.kind);
+        let typeString = _typeStringFromKind(declaration.type.kind);
+        typeString = typeString === 'TypeReference' ? declaration.type.typeName && declaration.type.typeName.text : typeString;
+
+        if (/Constructor$/.test(typeString)) {
+          return;
+        }
+
         return new TDDeclarationNode(
           'Declaration',
           [],
           declaration.name.text,
           [],
-          typeString === 'TypeReference' ? declaration.type.typeName && declaration.type.typeName.text : typeString,
+          typeString,
           namespace);
-      });
+      }).filter((a) => Boolean(a));
     case 'FunctionDeclaration':
       return new TDDeclarationNode(
         'Declaration',
@@ -125,6 +135,10 @@ function _deconstructSourceFile(node, namespace=undefined) /* t:TDDeclarationNod
       );
     case 'InterfaceDeclaration':
     case 'ClassDeclaration':
+      if (/Constructor$/.test(_makeType(node))) {
+        return;
+      }
+
       return new TDDeclarationNode(
         'Interface',
         node.members
