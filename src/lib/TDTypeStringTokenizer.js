@@ -65,7 +65,11 @@ export function convertTokensToA(tokens, a) {
 }
 
 export function stringifyTokens(tokens) {
-  if (!tokens.length) {
+  if (tokens instanceof TDTypeToken) {
+    return tokens.value;
+  }
+
+  if (!tokens || !tokens.length) {
     return '';
   }
 
@@ -80,4 +84,46 @@ export function stringifyTokens(tokens) {
 
 export function stringifyAndFlatten(tokens) {
   return tokens.map((token) => token instanceof TDTypeToken ? token.value : stringifyTokens(token));
+}
+
+export function mergeTypes(typeString1, typeString2) {
+  return stringifyTokens(
+    consolidateTokens(
+      tokenizeString(typeString1),
+      tokenizeString(typeString2)
+    )
+  );
+}
+
+export function consolidateTokens(tokens1, tokens2) {
+  let head1 = stringifyTokens(tokens1[0]);
+  let head2 = stringifyTokens(tokens2[0]);
+  let rest1 = tokens1.slice(1);
+  let rest2 = tokens2.slice(1);
+  let newHead;
+
+  if (!rest1.length && rest2.length) {
+    rest1 = tokens1;
+    head1 = '';
+  }
+
+  if (!rest2.length && rest1.length) {
+    rest2 = tokens2;
+    head2 = '';
+  }
+
+  if (!head1 && !head2) {
+    return [];
+  }
+
+  if (head1 && head2 &&
+    head1 !== head2) {
+    newHead = new TDTypeToken(`${head1} | ${head2}`);
+  } else if ((!head1 || !head2)) {
+    newHead = new TDTypeToken(`[${head1 || head2}]`);
+  } else {
+    newHead = new TDTypeToken(head1);
+  }
+
+  return [newHead].concat(consolidateTokens(rest1, rest2));
 }

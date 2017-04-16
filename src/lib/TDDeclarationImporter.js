@@ -36,7 +36,7 @@ class TDDeclarationNode {
 const KEY_MAP = _generateNumberToKeyMap();
 
 console.log('starting');
-generateASTFromPath(__dirname + '/../../node_modules/typescript/lib/lib.d.ts');
+generateASTFromPath(__dirname + '/../../testlib.d.ts');
 console.log('done');
 
 let cachedASTs = {};
@@ -103,7 +103,7 @@ function _deconstructSourceFile(node, namespace=undefined) /* t:TDDeclarationNod
   switch(kind) {
     case 'VariableStatement':
       return node.declarationList.declarations.map((declaration) => {
-        let typeString = _typeStringFromKind(declaration.type.kind);
+        let typeString = _typeStringFromKind(declaration.type);
         typeString = typeString === 'TypeReference' ? declaration.type.typeName && declaration.type.typeName.text : typeString;
 
         if (/Constructor$/.test(typeString)) {
@@ -127,10 +127,10 @@ function _deconstructSourceFile(node, namespace=undefined) /* t:TDDeclarationNod
         // Dev Note: This is naive, fix it.
         node.parameters
           .map((parameter) => {
-            const value = _typeStringFromKind(parameter.type.kind);
+            const value = _typeStringFromKind(parameter.type);
             return Boolean(parameter.questionToken) ? `[${value}]` : value;
           })
-          .join(' -> ') + ' -> ' + _typeStringFromKind(node.type.kind),
+          .join(' -> ') + ' -> ' + _typeStringFromKind(node.type),
         namespace
       );
     case 'InterfaceDeclaration':
@@ -152,10 +152,10 @@ function _deconstructSourceFile(node, namespace=undefined) /* t:TDDeclarationNod
            *
            * Yes, I know this isn't efficient. But it's real easy on the eyes.
            */
-          .filter((member) => _typeStringFromKind(member.kind) !== 'IndexSignature')
-          .filter((member) => _typeStringFromKind(member.kind) !== 'ConstructSignature')
-          .filter((member) => _typeStringFromKind(member.kind) !== 'CallSignature')
-          .filter((member) => _typeStringFromKind(member.kind) !== 'Constructor')
+          .filter((member) => _typeStringFromKind(member) !== 'IndexSignature')
+          .filter((member) => _typeStringFromKind(member) !== 'ConstructSignature')
+          .filter((member) => _typeStringFromKind(member) !== 'CallSignature')
+          .filter((member) => _typeStringFromKind(member) !== 'Constructor')
           .map((member) => {
             const typeString = _makeType(member);
             return new TDDeclarationNode(
@@ -189,19 +189,23 @@ function _deconstructSourceFile(node, namespace=undefined) /* t:TDDeclarationNod
 function _makeType(node) /* t:String */ {
   let type = '';
 
-  if (node.type &&  _typeStringFromKind(node.type.kind, node.typeParameters) === 'FunctionType') {
+  if (node.type &&  _typeStringFromKind(node.type, node.typeParameters) === 'FunctionType') {
     type = node.type.parameters.map(_getSignatureFromParameter).join(' -> ') + ' -> ';
-    type += node.type ? _typeStringFromKind(node.type.kind, node.typeParameters) : node.name.text;
+    if (node.type.type && node.type.type.typeName) {
+      type += node.type.type.typeName.text.toLowerCase();
+    } else {
+      type += _typeStringFromKind(node.type.type);
+    }
   } else if (node.parameters && node.parameters.length) {
     type = node.parameters.map(_getSignatureFromParameter).join(' -> ') + ' -> ';
-    type += node.type ? _typeStringFromKind(node.type.kind, node.typeParameters) : node.name.text;
+    type += node.type ? _typeStringFromKind(node.type, node.typeParameters) : node.name.text;
   } else if (node.typeParameters && node.typeParameters.length) {
     type = node.typeParameters.map(_getSignatureFromParameter).join(' ');
-    type = (node.type ? _typeStringFromKind(node.type.kind, node.typeParameters) : node.name.text) + ' ' + type;
-  } else if (_typeStringFromKind(node.kind, node.typeParameters) === 'TypeParameter') {
+    type = (node.type ? _typeStringFromKind(node.type, node.typeParameters) : node.name.text) + ' ' + type;
+  } else if (_typeStringFromKind(node, node.typeParameters) === 'TypeParameter') {
     type += node.name.text.toLowerCase();
   } else {
-    type += node.type ? _typeStringFromKind(node.type.kind, node.typeParameters) : node.name.text;
+    type += node.type ? _typeStringFromKind(node.type, node.typeParameters) : node.name.text;
   }
 
   return type;
@@ -224,8 +228,8 @@ function _getSignatureFromParameter(parameter /* t:any */) /* t:String */ {
   return signature;
 }
 
-function _typeStringFromKind(kind /* t:Number */, typeParameters /* t:any */) /* t:String */ {
-  const tsKeyword /* t:String */ = _getKindFromEnum(kind);
+function _typeStringFromKind(node /* t:any */, typeParameters /* t:any */) /* t:String */ {
+  const tsKeyword /* t:String */ = _getKindFromEnum(node.kind);
 
   switch (tsKeyword) {
     case 'BooleanKeyword':
@@ -244,7 +248,7 @@ function _typeStringFromKind(kind /* t:Number */, typeParameters /* t:any */) /*
       return 'TypeReference';
     case 'ArrayType':
     case 'TupleType':
-      return `Array ${typeParameters ? typeParameters.map((type) => type.name.text).join(' ') : 'any'}`;
+      return `Array ${typeParameters ? typeParameters.map((type) => type.name.text.toLowerCase()).join(' ') : 'any'}`;
     case 'FunctionType':
     default:
       return tsKeyword;

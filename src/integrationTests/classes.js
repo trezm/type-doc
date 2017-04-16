@@ -148,7 +148,7 @@ const someClass /* t:SuperestClass */ = new SubClass();
       expect(errors[0].extras.actualType).to.equal('Number');
     });
 
-    it('should throw an error in strict mode if have an undeclared method', () => {
+    it('should throw an error in strict mode if it has an undeclared method', () => {
       const errors = new TDTypeChecker(`
   /**
    * class :: TestClass
@@ -176,7 +176,7 @@ const someClass /* t:SuperestClass */ = new SubClass();
       expect(errors[0].extras.class).to.equal('TestClass');
     });
 
-    it('should throw an error in strict mode if have an undeclared property', () => {
+    it('should throw an error in strict mode if it has an undeclared property', () => {
       const errors = new TDTypeChecker(`
   /**
    * class :: TestClass

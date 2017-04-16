@@ -13,8 +13,8 @@ var stringArray /* t:Array String */ = [];
 
   it('should throw an error when the generic type does not match', () => {
     const errors = new TDTypeChecker(`
-var NumberArray /* t:Array Number */ = []
-var stringArray /* t:Array String */ = NumberArray;
+var numberArray /* t:Array Number */ = []
+var stringArray /* t:Array String */ = numberArray;
 `).run();
 
     expect(errors[0].extras.expectedType).to.equal('Array String');

@@ -306,8 +306,8 @@ export class TDTypeChecker {
     }
 
     const classPropertyDef = classDeclaration &&
-      classDeclaration.type.properties &&
-      classDeclaration.type.properties[node.left.property && node.left.property.name];
+      classDeclaration.type.getPropertyTypeForName &&
+      classDeclaration.type.getPropertyTypeForName(node.left.property && node.left.property.name);
 
     if (!classPropertyDef &&
       this.options.strictClassChecks) {
@@ -426,8 +426,8 @@ export class TDTypeChecker {
 
     const classDeclaration = node.scope.findThisDef();
     const classMethodDef = classDeclaration &&
-      classDeclaration.type.methods &&
-      classDeclaration.type.methods[node.key.name];
+      classDeclaration.type.getMethodTypeForName &&
+      classDeclaration.type.getMethodTypeForName(node.key.name);
 
     if (classDeclaration &&
       !classMethodDef &&
@@ -633,7 +633,7 @@ export class TDTypeChecker {
             !objectType.isAny &&
             objectType.properties) {
             // Note, we're assuming that property is _always_ an Identifier.
-            const propertyType = objectType.properties[node.property.name];
+            const propertyType = objectType.getPropertyTypeForName(node.property.name);
 
             const classType = scope.findTypeForName(
               propertyType && propertyType.typeString

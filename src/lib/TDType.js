@@ -58,6 +58,9 @@ export class TDType {
   }
 
   get types() /* t:Array TDType */ {
+    const someStringArray /* t:Array String */ = ['hello'];
+    const array /* t:Array TDType */ = someStringArray.map((typeString) => new TDType(typeString));
+
     return this.typeList.map((typeString) => new TDType(typeString));
   }
 

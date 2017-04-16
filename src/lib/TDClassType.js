@@ -1,6 +1,7 @@
 'use strict';
 
 import { TDType } from './TDType';
+import { mergeTypes } from './TDTypeStringTokenizer';
 
 /**
  * class :: TDClassType
@@ -38,13 +39,17 @@ export class TDClassType extends TDType {
   }
 
   addMethodDeclaration(name /* t:String */, methodSignature /* t:String */) /* t:TDClassType */ {
-    this._methods[name] = new TDType(methodSignature);
+    if (this._methods.hasOwnProperty(name)) {
+      this._methods[`__${name}`] = new TDType(mergeTypes(this._methods[name].typeString, methodSignature));
+    } else {
+      this._methods[`__${name}`] = new TDType(methodSignature);
+    }
 
     return this;
   }
 
   addPropertyDeclaration(name /* t:String */, propertyType /* t:String */) /* t:TDClassType */ {
-    this._properties[name] = new TDType(propertyType);
+    this._properties[`__${name}`] = new TDType(propertyType);
 
     return this;
   }
@@ -54,9 +59,20 @@ export class TDClassType extends TDType {
       .find((key) => {
         const keyClassName = key.split(' ')[0];
 
-        return keyClassName === name;
+        return keyClassName === `__${name}`;
       });
 
     return this.properties[matchingKey];
+  }
+
+  getMethodTypeForName(name /* t:String */) /* t:TDType */ {
+    const matchingKey = Object.keys(this._methods)
+      .find((key) => {
+        const keyClassName = key.split(' ')[0];
+
+        return keyClassName === `__${name}`;
+      });
+
+    return this.methods[matchingKey];
   }
 }

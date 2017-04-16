@@ -29,6 +29,9 @@ export class TDTypeInferer {
         break;
       }
       case 'CallExpression': {
+        /**
+         * Note to self: We probably want to do some generic inference around this point.
+         */
         if (!node.callee ||
           !node.callee.property) {
           break;
@@ -97,6 +100,10 @@ export class TDTypeInferer {
       });
 
     body.forEach((statement) => this.runOnNode(statement));
+  }
+
+  static _inferTypesFromBodyReturns(node) {
+
   }
 
   static _inferTypesFromBodyAssignments(node) {

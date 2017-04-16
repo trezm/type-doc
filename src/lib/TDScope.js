@@ -119,7 +119,7 @@ export class TDScope {
 
     switch (node.object.type) {
       case 'ThisExpression': {
-        const propertyType = this.this && this.this.type.properties && this.this.type.properties[propertyName];
+        const propertyType = this.this && this.this.type.getPropertyTypeForName && this.this.type.getPropertyTypeForName(propertyName);
 
         return (this.binding && this.binding.findTypeForName(propertyName)) ||
           propertyType ||
@@ -145,9 +145,9 @@ export class TDScope {
           node.scope.findTypeForName(objectType.typeString);
 
         if (classType) {
-          return classType.properties[node.property.name];
-        } else if (objectType && objectType.properties) {
-          return objectType.properties[node.property.name];
+          return classType.getPropertyTypeForName(node.property.name);
+        } else if (objectType && objectType.getPropertyTypeForName) {
+          return objectType.getPropertyTypeForName(node.property.name);
         } else {
           return objectType;
         }
@@ -182,6 +182,12 @@ export class TDScope {
           type.getPropertyTypeForName &&
           type.getPropertyTypeForName(node.property.name)) {
           let propType = type.getPropertyTypeForName(node.property.name);
+
+          type = propType;
+        } else if (type &&
+          type.getMethodTypeForName &&
+          type.getMethodTypeForName(node.property.name)) {
+          let propType = type.getMethodTypeForName(node.property.name);
 
           type = propType;
         } else if (type &&
