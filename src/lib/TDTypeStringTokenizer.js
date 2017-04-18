@@ -6,7 +6,7 @@ export class TDTypeToken {
   }
 }
 
-export function tokenizeString(inputString) {
+export function tokenizeString(inputString /* t:String */) /* t:Array TDTypeToken */ {
   inputString = inputString.trim();
   const existingTokens = [];
   const firstArrowIndex = inputString.indexOf('->');
@@ -82,7 +82,7 @@ export function stringifyTokens(tokens) {
     .join(' -> ');
 }
 
-export function stringifyAndFlatten(tokens) {
+export function stringifyAndFlatten(tokens /* t:Array TDTypeToken */) /* t:Array String */ {
   return tokens.map((token) => token instanceof TDTypeToken ? token.value : stringifyTokens(token));
 }
 

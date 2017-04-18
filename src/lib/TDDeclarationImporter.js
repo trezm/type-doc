@@ -35,10 +35,10 @@ class TDDeclarationNode {
 
 const KEY_MAP = _generateNumberToKeyMap();
 
-console.log('starting');
-generateASTFromPath(__dirname + '/../../testlib.d.ts');
-console.log('done');
+// generateASTFromPath(__dirname + '/../../testlib.d.ts');
+generateASTFromPath(__dirname + '/../../node_modules/typescript/lib/lib.d.ts');
 
+let interfaceCache = {};
 let cachedASTs = {};
 export function generateASTFromPath(path /* t:String */) /* t:Array TDDeclarationNode */ {
   let referencedASTs;
@@ -62,6 +62,7 @@ export function generateASTFromPath(path /* t:String */) /* t:Array TDDeclaratio
 
 export function generateASTFromSourceFile(sourceFile, referencedASTs /* t:Array TDDeclarationNode */) /* t:Array TDDeclarationNode */ {
   let statements = [];
+  if (!interfaceCache) { interfaceCache = {}; }
 
   ts.forEachChild(sourceFile, (_node) => {
     let result = _deconstructSourceFile(_node);
@@ -138,39 +139,49 @@ function _deconstructSourceFile(node, namespace=undefined) /* t:TDDeclarationNod
       if (/Constructor$/.test(_makeType(node))) {
         return;
       }
+      const isUpdate /* t:Boolean */ = Boolean(interfaceCache[`__${node.name.text}`]);
 
-      return new TDDeclarationNode(
+      const declaration = isUpdate ? interfaceCache[`__${node.name.text}`] : new TDDeclarationNode(
         'Interface',
-        node.members
-          /**
-           * Dev Note:
-           *
-           * For now, we're ignoring:
-           *   - IndexSignature, i.e. [s: string]: number
-           *   - ConstructSignature, new (value?: any): Object
-           *   - CallSignature, I think this is (): any;?
-           *
-           * Yes, I know this isn't efficient. But it's real easy on the eyes.
-           */
-          .filter((member) => _typeStringFromKind(member) !== 'IndexSignature')
-          .filter((member) => _typeStringFromKind(member) !== 'ConstructSignature')
-          .filter((member) => _typeStringFromKind(member) !== 'CallSignature')
-          .filter((member) => _typeStringFromKind(member) !== 'Constructor')
-          .map((member) => {
-            const typeString = _makeType(member);
-            return new TDDeclarationNode(
-              'Declaration',
-              [],
-              member.name.text,
-              [],
-              typeString === 'TypeReference' ? node.name.text : typeString,
-              namespace
-            );
-          }),
+        [],
         node.name.text,
         [],
         _makeType(node)
       );
+
+      interfaceCache[`__${node.name.text}`] = declaration;
+      declaration.properties = declaration.properties.concat(node.members
+        /**
+         * Dev Note:
+         *
+         * For now, we're ignoring:
+         *   - IndexSignature, i.e. [s: string]: number
+         *   - ConstructSignature, new (value?: any): Object
+         *   - CallSignature, I think this is (): any;?
+         *
+         * Yes, I know this isn't efficient. But it's real easy on the eyes.
+         */
+        .filter((member) => _typeStringFromKind(member) !== 'IndexSignature')
+        .filter((member) => _typeStringFromKind(member) !== 'ConstructSignature')
+        .filter((member) => _typeStringFromKind(member) !== 'CallSignature')
+        .filter((member) => _typeStringFromKind(member) !== 'Constructor')
+        .map((member) => {
+          const typeString = _makeType(member);
+          return new TDDeclarationNode(
+            'Declaration',
+            [],
+            member.name.text,
+            [],
+            typeString === 'TypeReference' ? node.name.text : typeString,
+            namespace
+          );
+        }));
+
+      if (isUpdate) {
+        return undefined;
+      } else {
+        return declaration;
+      }
     case 'ModuleDeclaration':
       return node.body.statements
         .map((_node) => _deconstructSourceFile(_node, node.name.text))
@@ -248,7 +259,9 @@ function _typeStringFromKind(node /* t:any */, typeParameters /* t:any */) /* t:
       return 'TypeReference';
     case 'ArrayType':
     case 'TupleType':
-      return `Array ${typeParameters ? typeParameters.map((type) => type.name.text.toLowerCase()).join(' ') : 'any'}`;
+      if (typeParameters) { return `Array ${typeParameters.map((type) => type.name.text.toLowerCase()).join(' ')}`; }
+      if (node.elementType) { return `Array ${_typeStringFromKind(node.elementType)}`; }
+      return `Array any`;
     case 'FunctionType':
     default:
       return tsKeyword;

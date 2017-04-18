@@ -59,7 +59,9 @@ export class TDTypeChecker {
     profile('Type Inference', options.showProfiling);
 
     const importErrors = (ast.imports || [])
-      .map((importedTree) => this._checkNode(importedTree.ast))
+      .map((importedTree) => {
+        return new TDTypeChecker(importedTree.ast.file, importedTree.ast).run(options);
+      })
       .reduce((a, b) => a.concat(b), []);
 
     let newErrors = importErrors.concat(this._checkNode(ast, []));
@@ -507,6 +509,7 @@ export class TDTypeChecker {
       case 'FunctionExpression':
       case 'ArrowFunctionExpression':
         node.body.scope = scope;
+
         let arrowFunctionReturn = this._findTypeForNode(node.body);
 
         return new TDType(node.params
@@ -514,6 +517,8 @@ export class TDTypeChecker {
           .join(' -> ') + ' -> ' + arrowFunctionReturn.typeString);
       case 'Literal':
         return new TDType((typeof node.value).capitalize());
+      case 'TemplateLiteral':
+        return new TDType('String');
       case 'Identifier': {
         let type = scope.findTypeForName(node.name);
 
@@ -625,7 +630,13 @@ export class TDTypeChecker {
       case 'MemberExpression': {
         if (node.object.type === 'ThisExpression') {
           const type = node.scope.findTypeForStaticMember(node);
-          return type || TDType.any();
+          let classType;
+
+          if (type) {
+            classType = scope.findTypeForName(type.typeString);
+          }
+
+          return classType || type || TDType.any();
         } else {
           const objectType = this._findTypeForNode(node.object);
 
@@ -639,6 +650,17 @@ export class TDTypeChecker {
               propertyType && propertyType.typeString
             );
             return classType || propertyType || TDType.any();
+          } else if (objectType &&
+            !objectType.isAny &&
+            node.property.type === 'Literal') {
+            let type = new TDType(objectType.genericTypes[0] || objectType.typeString.split(' ')[1]);
+            let classType;
+
+            if (!type.isAny) {
+              classType = scope.findTypeForName(type.typeString);
+            }
+
+            return classType || type;
           } else {
             return objectType;
           }
@@ -658,6 +680,15 @@ export class TDTypeChecker {
       }
       case 'ArrayExpression': {
         return new TDType('Array any');
+      }
+      case 'ConditionalExpression': {
+        const consequent = this._findTypeForNode(node.consequent);
+        const alternate = this._findTypeForNode(node.alternate);
+
+        if (consequent.isSubclassOf(alternate)) { return alternate; }
+        if (alternate.isSubclassOf(consequent)) { return consequent; }
+
+        return new TDType(`${consequent.typeString} | ${alternate.typeString}`);
       }
       default:
         return;

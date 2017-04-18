@@ -6,6 +6,20 @@ import {
   tokenizeString
 } from './TDTypeStringTokenizer';
 
+/**
+ * class :: TDType
+ *   typeString :: String
+ *   superType :: [TDType]
+ *   superTypeString :: [String]
+ *   typeList :: Array String
+ *   typeString :: String
+ *   isGeneric :: Boolean
+ *   types :: Array TDType
+ *   genericTypes :: Array String
+ *   isOptional :: Boolean
+ *   extractGenericMapGivenType :: TDType -> any
+ *   isSubclassOf :: TDType -> Boolean
+ */
 export class TDType {
   constructor(typeString='any' /* t:String */, genericMap={} /* t:any */) {
     let superTypeString;
@@ -58,10 +72,7 @@ export class TDType {
   }
 
   get types() /* t:Array TDType */ {
-    const someStringArray /* t:Array String */ = ['hello'];
-    const array /* t:Array TDType */ = someStringArray.map((typeString) => new TDType(typeString));
-
-    return this.typeList.map((typeString) => new TDType(typeString));
+    return this.typeList.map((typeString, index, array) => new TDType(typeString));
   }
 
   get genericTypes() /* t:Array String */ {
@@ -72,6 +83,8 @@ export class TDType {
   }
 
   get typeList() /* t:Array String */ {
+    const tokens /* t:Array TDTypeToken */ = tokenizeString(this.typeString);
+
     return stringifyAndFlatten(tokenizeString(this.typeString));
   }
 

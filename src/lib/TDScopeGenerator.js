@@ -23,7 +23,6 @@ export class TDScopeGenerator {
 
         const tdType = this._searchForNodeType(node);
         const tdDeclaration = new TDDeclaration(tdType, node.key.name);
-        scope.initializeBinding(tdType);
 
         node.value.params.forEach((param) => {
           // TODO:Handle param defaults better
@@ -172,6 +171,11 @@ export class TDScopeGenerator {
       case 'MemberExpression': {
         this._assignDeclarationTypes(node.object, existingScope);
         this._assignDeclarationTypes(node.property, existingScope);
+        return;
+      }
+      case 'ConditionalExpression': {
+        this._assignDeclarationTypes(node.consequent, existingScope);
+        this._assignDeclarationTypes(node.alternate, existingScope);
         return;
       }
       default:

@@ -138,13 +138,14 @@ export class TDScope {
         return this.findTypeForName(node.object.callee.name);
       case 'ThisExpression':
         return (this.binding && this.binding.findTypeForName(propertyName)) ||
+          (this.parent && this.parent.findTypeForMember(node)) ||
           (this.parent && this.parent.findTypeForStaticMember(node));
       case 'MemberExpression': {
         const objectType = node.object.scope.findTypeForMember(node.object);
         const classType = objectType &&
           node.scope.findTypeForName(objectType.typeString);
 
-        if (classType) {
+        if (classType && classType.getPropertyTypeForName) {
           return classType.getPropertyTypeForName(node.property.name);
         } else if (objectType && objectType.getPropertyTypeForName) {
           return objectType.getPropertyTypeForName(node.property.name);
@@ -153,17 +154,17 @@ export class TDScope {
         }
       }
       case 'CallExpression': {
-        const propertyClassName = node.property.name.split(' ')[0];
+        const propertyClassName = node.property.name ? node.property.name.split(' ')[0] : node.property.value;
         let type = this.findTypeForMember(node.object.callee);
 
-        if (!type.getPropertyTypeForName) {
+        if (!type || !type.getPropertyTypeForName) {
           return TDType.any();
         } else {
           return type.getPropertyTypeForName(propertyName);
         }
       }
       case 'Identifier': {
-        const propertyClassName = node.property.name.split(' ')[0];
+        const propertyClassName = node.property.name ? node.property.name.split(' ')[0] : node.property.value;
         let type = this.findTypeForName(node.object.name);
         const originalType = type;
         let genericMap = {};
@@ -172,7 +173,7 @@ export class TDScope {
           !(type instanceof TDClassType) &&
           !type.isAny) {
           type = this.findTypeForName(type.typeString);
-          genericMap = type.extractGenericMapGivenType(originalType);
+          genericMap = type ? type.extractGenericMapGivenType(originalType) : {};
         }
 
         /**
