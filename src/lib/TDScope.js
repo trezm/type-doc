@@ -131,15 +131,15 @@ export class TDScope {
   }
 
   findTypeForMember(node /* t:Object */) /* t:TDType */ {
-    const propertyName = node.property.name;
-
     switch (node.object.type) {
       case 'NewExpression':
         return this.findTypeForName(node.object.callee.name);
-      case 'ThisExpression':
+      case 'ThisExpression': {
+        const propertyName = node.property.name;
         return (this.binding && this.binding.findTypeForName(propertyName)) ||
           (this.parent && this.parent.findTypeForMember(node)) ||
           (this.parent && this.parent.findTypeForStaticMember(node));
+      }
       case 'MemberExpression': {
         const objectType = node.object.scope.findTypeForMember(node.object);
         const classType = objectType &&
@@ -154,8 +154,10 @@ export class TDScope {
         }
       }
       case 'CallExpression': {
+        const propertyName = node.property.name;
         const propertyClassName = node.property.name ? node.property.name.split(' ')[0] : node.property.value;
-        let type = this.findTypeForMember(node.object.callee);
+
+        let type = node.object.callee.type === 'MemberExpression' ? this.findTypeForMember(node.object.callee) : this.findTypeForName(node.object.callee.name);
 
         if (!type || !type.getPropertyTypeForName) {
           return TDType.any();

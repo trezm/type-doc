@@ -180,6 +180,7 @@ export class TDTypeAdapter {
 
       let signature = [];
 
+      debugger;
       paramStrings.forEach((paramString) => {
         const paramStringMatch = paramString.match(JSDOC_SINGLE_PARAM_REGEX);
         const param = node.value.params.find((functionParam) => functionParam.name === paramStringMatch[2]);
@@ -271,6 +272,12 @@ export class TDTypeAdapter {
   }
 
   _addTypeToRequire(node) {
+    // Require is probably an expression instead of a value, so ditch early.
+    if (node.init.arguments[0] &&
+      !node.init.arguments[0].value) {
+      return;
+    }
+
     const importName = node.init.arguments[0] &&
       node.init.arguments[0].value.replace(/^\.\//, '');
     const imports = this._ast.imports;

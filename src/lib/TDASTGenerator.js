@@ -125,13 +125,13 @@ export class TDASTGenerator {
   }
 
   _generateRequiresAsts(requiresList /* t:[Object] */) /* t:[Object] */ {
-    const pathArray = this._entryFile.split('/');
-    pathArray.pop();
+    const pathBase = this._entryFile.split('/');
+    pathBase.pop();
 
     requiresList = requiresList
       .map((_requires) => {
         const source = _requires.init.arguments[0].value.replace(/^\.\//, '');
-        pathArray.push(source);
+        const pathArray = pathBase.concat([source]);
         const astGenerator = new TDASTGenerator(pathArray.join('/'));
         return {
           astGenerator: astGenerator,

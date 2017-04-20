@@ -125,7 +125,8 @@ export class TDScopeGenerator {
       case 'VariableDeclarator': {
         if (node.init &&
           node.init.callee &&
-          node.init.callee.name === 'require') {
+          node.init.callee.name === 'require' &&
+          node.init.arguments[0].value) {
           const importName = node.init.arguments[0] &&
             node.init.arguments[0].value.replace(/^\.\//, '');
           const imports = this.ast.imports;
@@ -135,10 +136,10 @@ export class TDScopeGenerator {
             new TDScopeGenerator(relevantImport.ast).generate(this.ast.scope);
           }
 
-          const type = this._findImportOrRequireForName(undefined, relevantImport);
+          const declaration = this._findImportOrRequireForName(undefined, relevantImport);
 
-          if (type) {
-            existingScope.addDeclaration(new TDDeclaration(type, node.id.name));
+          if (declaration) {
+            existingScope.addDeclaration(new TDDeclaration(declaration.type, node.id.name));
           }
         } else {
           const tdType = this._searchForNodeType(node);
