@@ -1,10 +1,19 @@
 'use strict';
 
 import { resolve } from 'path';
-import { TDASTGenerator } from './TDASTGenerator';
+import {
+  TDASTGenerator,
+  clearCache as clearASTCache
+} from './TDASTGenerator';
 import { TDClassType } from './TDClassType';
-import { TDScopeGenerator } from './TDScopeGenerator';
-import { TDTypeAdapter } from './TDTypeAdapter';
+import {
+  TDScopeGenerator,
+  clearCache as clearScopeCache
+} from './TDScopeGenerator';
+import {
+  TDTypeAdapter,
+  clearCache as clearTypeCache
+} from './TDTypeAdapter';
 import { TDTypeInferer } from './TDTypeInferer';
 import { TDType } from './TDType';
 import {
@@ -13,6 +22,11 @@ import {
 } from '../errors';
 import { config } from './TDConfigSingleton';
 import { profile } from './TDProfiler';
+import { mergeTypes } from './TDTypeStringTokenizer';
+import {
+  findTypeForNode,
+  findReturnType
+ } from './TDTypeResolver';
 
 String.prototype.capitalize = function() {
   return this.charAt(0).toUpperCase() + this.slice(1);
@@ -23,6 +37,13 @@ const DEFAULT_OPTIONS = {
   silenceProfiler: true
 };
 
+let errorCache = {};
+export function clearCache() {
+  errorCache = {};
+  clearASTCache();
+  clearTypeCache();
+  clearScopeCache();
+}
 export class TDTypeChecker {
   constructor(file, ast) {
     this._file = file;
@@ -31,9 +52,15 @@ export class TDTypeChecker {
 
   run(options=DEFAULT_OPTIONS) {
     options = Object.assign({}, Object.assign({}, DEFAULT_OPTIONS), options);
+
     Object.getOwnPropertyNames(options).forEach((key) => config[key] = options[key]);
 
     this.options = Object.assign(Object.assign({}, DEFAULT_OPTIONS), options);
+
+    if (!options.clearCache) {
+      clearCache();
+      options.clearCache = true;
+    }
 
     let ast = this._ast;
     let tdTypeAdapter;
@@ -58,16 +85,17 @@ export class TDTypeChecker {
 
     profile('Type Inference', options.showProfiling);
 
-    const importErrors = (ast.imports || [])
-      .map((importedTree) => {
-        return new TDTypeChecker(importedTree.ast.file, importedTree.ast).run(options);
-      })
-      .reduce((a, b) => a.concat(b), []);
+    let errors = errorCache[ast.file] || this._checkNode(ast, []);
+    errorCache[ast.file] = errors;
 
-    let newErrors = importErrors.concat(this._checkNode(ast, []));
+    errors = errors.concat((ast.imports || [])
+      .map((importedTree) => {
+        return errorCache[importedTree.ast.file] || new TDTypeChecker(importedTree.ast.file, importedTree.ast).run(options);
+      })
+      .reduce((a, b) => a.concat(b), []));
 
     profile('Type Checking', options.showProfiling);
-    return newErrors;
+    return errors;
   }
 
   _checkNode(node, errors=[]) {
@@ -232,7 +260,7 @@ export class TDTypeChecker {
       functionType = node.scope.findTypeForMember(node);
     }
 
-    const objectType = this._findTypeForNode(node.object);
+    const objectType = findTypeForNode(node.object);
 
     if (!objectType) {
       return errors;
@@ -272,11 +300,11 @@ export class TDTypeChecker {
     if (node.init &&
       node.init.callee &&
       node.init.callee.name === 'require') {
-      declaratorType = this._findTypeForNode(node.id);
+      declaratorType = findTypeForNode(node.id);
       assignmentType = node.scope.findTypeForName(node.id.name) || TDType.any();
     } else {
-      declaratorType = this._findTypeForNode(node.id);
-      assignmentType = this._findTypeForNode(node.init);
+      declaratorType = findTypeForNode(node.id);
+      assignmentType = findTypeForNode(node.init);
     }
 
     const error = this._testTypes(declaratorType, assignmentType, node);
@@ -288,8 +316,8 @@ export class TDTypeChecker {
     node.left.scope = node.scope;
     node.right.scope = node.scope;
 
-    const declaratorType = this._findTypeForNode(node.left);
-    const assignmentType = this._findTypeForNode(node.right);
+    const declaratorType = findTypeForNode(node.left);
+    const assignmentType = findTypeForNode(node.right);
 
     const error = this._testTypes(declaratorType, assignmentType, node);
 
@@ -327,14 +355,14 @@ export class TDTypeChecker {
       })]);
     }
 
-    const error = this._testTypes(classPropertyDef, this._findTypeForNode(node.right), node);
+    const error = this._testTypes(classPropertyDef, findTypeForNode(node.right), node);
 
     return (error && errors.concat([error])) || errors;
   }
 
   _checkFunctionReturnType(node, errors=[]) {
     const functionReturnType = new TDType(node.tdType && node.tdType.typeList[node.tdType.typeList.length - 1]);
-    const bodyReturnType = this._findReturnType(node.body);
+    const bodyReturnType = findReturnType(node.body);
 
     const error = this._testTypes(functionReturnType, bodyReturnType, node);
 
@@ -342,7 +370,7 @@ export class TDTypeChecker {
   }
 
   _checkCallType(node, errors=[]) {
-    const objectType = this._findTypeForNode(node);
+    const objectType = findTypeForNode(node);
     // Remove?
   }
 
@@ -351,25 +379,16 @@ export class TDTypeChecker {
     let functionDeclaration;
     let functionType;
 
-    if (!node.callee.object && node.callee.type !== 'Identifier') {
-      debugger;
-    }
-
     if (node.callee.type === 'Identifier') {
       functionType = scope.findTypeForName(node.callee.name);
     } else if (node.callee.type === 'Super') {
       // TODO: Handle super calls
       return errors;
     } else if (node.callee.type === 'CallExpression') {
-      functionType = this._findTypeForNode(node.callee);
+      functionType = findTypeForNode(node.callee);
     } else if (node.callee.object.type === 'ThisExpression') {
       functionType = scope.findTypeForStaticMember(node.callee);
     } else {
-      if (node.callee.property &&
-        node.callee.property.name === 'getShortcodeFromShortcodeString') {
-        debugger;
-      }
-
       functionType = scope.findTypeForMember(node.callee);
     }
 
@@ -381,7 +400,7 @@ export class TDTypeChecker {
     const genericTypes = {};
     return functionType && node.arguments.map((argument, index) => {
       // TODO: Short circuit if for some reason there is no argumentDeclarationType
-      const argumentDeclarationType = this._findTypeForNode(argument, argument.scope || scope) || TDType.any();
+      const argumentDeclarationType = findTypeForNode(argument, argument.scope || scope) || TDType.any();
       const paramType = new TDType(functionType.typeList[index]);
       let genericsErrors = this._checkNode(argument);
 
@@ -468,18 +487,6 @@ export class TDTypeChecker {
     return errors;
   }
 
-  /**
-   * New helper methods
-   */
-
-  _findReturnType(node, errors=[]) {
-    let returnStatement = node
-      .body
-      .find((statement) => statement.type === 'ReturnStatement');
-
-    return (returnStatement && this._findTypeForNode(returnStatement)) || TDType.any();
-  }
-
 /**
  * Legacy check methods
  */
@@ -502,223 +509,5 @@ export class TDTypeChecker {
     }
 
     return;
-  }
-
-  _findTypeForNode(node, scope) {
-    let tdDeclaration;
-    let signature;
-    let returnType;
-    let genericTypes = {};
-
-    if (!node) {
-      return;
-    } else {
-      scope = scope || node.scope;
-    }
-
-    switch (node.type) {
-      case 'FunctionExpression':
-      case 'ArrowFunctionExpression':
-        node.body.scope = scope;
-
-        let arrowFunctionReturn = this._findTypeForNode(node.body);
-
-        return new TDType(node.params
-          .map((param) => (param.tdType || TDType.any()).typeString)
-          .join(' -> ') + ' -> ' + arrowFunctionReturn.typeString);
-      case 'Literal':
-        return new TDType((typeof node.value).capitalize());
-      case 'TemplateLiteral':
-        return new TDType('String');
-      case 'Identifier': {
-        let type = scope.findTypeForName(node.name);
-
-        let classType = scope.findTypeForName(
-          type && type.typeString
-        );
-
-        if (classType &&
-          !(classType instanceof TDClassType)) {
-          classType = undefined;
-        }
-
-        if (type && !type.isGeneric && classType && classType.isGeneric) { return type; }
-        if (classType) { return classType; }
-        if (type) { return type; }
-        return TDType.any();
-      }
-      case 'AssignmentExpression':
-        return this._findTypeForNode(node.right);
-      case 'BinaryExpression':
-        node.left.scope = scope;
-        node.right.scope = scope;
-        return this._findTypeForExpression(node);
-      case 'NewExpression': {
-        const type = node.scope.findTypeForName(node.callee.name);
-        const isAny = type && type.isAny;
-
-        if (isAny || !type) {
-          return new TDType(node.callee.name);
-        } else {
-          return type;
-        }
-      }
-      case 'CallExpression': {
-        /**
-         * Okay, so this is a little interesting actually, basically for a call expression the
-         * callee will either be:
-         *  - An Identifier
-         *  - A MemberExpression
-         *    - For member expressions, they can be infinitely chained
-         *    - A MemberExpression consists of the last property under `property` and then all
-         *        of the preceding access under another MemberExpression under `object`.
-         *    - When both `object` and `property` are identifiers, the chain has ended
-         *
-         * With this in mind, we should be checking the type access of everything in _reverse order_
-         * and passing the type down. In other words, we recursively go through the tree until we reach
-         * (identifier,identifier), test the type, then return the type of the property along with any errors
-         * and continue this process until we return here.
-         */
-        let type;
-
-        if (node.callee.type === 'Identifier') {
-          type = scope.findTypeForName(node.callee.name);
-        } else if (node.callee.type === 'Super') {
-          // TODO: Handle super calls
-          return errors;
-        } else if (node.callee.type === 'CallExpression') {
-          type = this._findTypeForNode(node.callee);
-        } else if (node.callee.object.type === 'ThisExpression') {
-          type = scope.findTypeForStaticMember(node.callee);
-        } else {
-          type = scope.findTypeForMember(node.callee);
-        }
-
-        if (!type) {
-          returnType = this._findTypeForNode(node.callee);
-        }
-
-        signature = (type && type.typeString.split(' -> ')) ||
-          (returnType && returnType.typeString.split(' -> '));
-        returnType = signature && signature.pop();
-
-        type && type.typeList.length > 1 && node.arguments.forEach((argument, index) => {
-          const argumentDeclarationType = new TDType(this._findTypeForNode(argument, argument.scope || scope));
-          const paramTypeString = type.typeList[index];
-
-          // Should do something with the real tokenizer here.
-          paramTypeString
-            .split('->')
-            .map((aType) => aType.trim())
-            .forEach((typeString, index) => {
-              if (genericTypes[typeString] && argumentDeclarationType.isGeneric) {
-                genericTypes[argumentDeclarationType.typeList[index]] = typeString;
-              } else if (genericTypes[typeString] &&
-                genericTypes[typeString] !== argumentDeclarationType.typeList[index]) {
-                throw new TypeMismatchError(`Generic type '${typeString}' is inconsistent at line ${node.loc.start.line}`, {
-                  type1: genericTypes[typeString],
-                  type2: argumentDeclarationType.typeList[index],
-                  start: {
-                    line: node.loc.start.line,
-                    column: node.loc.start.column
-                  },
-                  end: {
-                    line: node.loc.end.line,
-                    column: node.loc.end.column
-                  }
-                });
-              } else if (TDType.testForGeneric(typeString)) {
-                genericTypes[typeString] = argumentDeclarationType.typeList[index];
-              }
-            });
-        });
-
-        // Do we need to wrap TDType here...
-        return new TDType(this._followGenericChain(genericTypes, returnType) || returnType || TDType.any());
-      }
-      case 'ReturnStatement':
-        // TODO: Short circuit if for some reason there is no
-        node.argument && (node.argument.scope = scope);
-        return this._findTypeForNode(node.argument);
-      case 'MemberExpression': {
-        if (node.object.type === 'ThisExpression') {
-          const type = node.scope.findTypeForStaticMember(node);
-          let classType;
-
-          if (type) {
-            classType = scope.findTypeForName(type.typeString);
-          }
-
-          return classType || type || TDType.any();
-        } else {
-          const objectType = this._findTypeForNode(node.object);
-
-          if (objectType &&
-            !objectType.isAny &&
-            objectType.properties) {
-            // Note, we're assuming that property is _always_ an Identifier.
-            const propertyType = objectType.getPropertyTypeForName(node.property.name);
-
-            const classType = scope.findTypeForName(
-              propertyType && propertyType.typeString
-            );
-            return classType || propertyType || TDType.any();
-          } else if (objectType &&
-            !objectType.isAny &&
-            node.property.type === 'Literal') {
-            let type = new TDType(objectType.genericTypes[0] || objectType.typeString.split(' ')[1]);
-            let classType;
-
-            if (!type.isAny) {
-              classType = scope.findTypeForName(type.typeString);
-            }
-
-            return classType || type;
-          } else {
-            return objectType;
-          }
-        }
-      }
-      case 'ThisExpression': {
-        const thisDeclaration = node.scope.findThisDef();
-
-        return thisDeclaration && thisDeclaration.type;
-      }
-      case 'BlockStatement': {
-        return this._findReturnType(node);
-      }
-      case 'ObjectExpression': {
-        // TODO: Consider handling more strictly
-        return TDType.any();
-      }
-      case 'ArrayExpression': {
-        return new TDType('Array any');
-      }
-      case 'ConditionalExpression': {
-        const consequent = this._findTypeForNode(node.consequent);
-        const alternate = this._findTypeForNode(node.alternate);
-
-        if (consequent.isSubclassOf(alternate)) { return alternate; }
-        if (alternate.isSubclassOf(consequent)) { return consequent; }
-
-        return new TDType(`${consequent.typeString} | ${alternate.typeString}`);
-      }
-      default:
-        return;
-    }
-  }
-
-  _followGenericChain(generics, type) {
-    const genericValue = generics[type];
-
-    if (!genericValue) {
-      return;
-    }
-
-    return this._followGenericChain(generics, genericValue) || genericValue;
-  }
-
-  _findTypeForExpression(expression) {
-    return this._findTypeForNode(expression.left);
   }
 }

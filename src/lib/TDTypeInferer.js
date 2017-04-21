@@ -3,6 +3,7 @@
 import { TDDeclaration } from './TDDeclaration';
 import { TDScope } from './TDScope';
 import { TDType } from './TDType';
+import { findTypeForNode } from './TDTypeResolver';
 
 export class TDTypeInferer {
   static run(ast /* t:any */) /* t:any */ {
@@ -61,9 +62,14 @@ export class TDTypeInferer {
       }
       case 'VariableDeclaration':
         node.declarations.forEach((variableDeclarator) => this.runOnNode(variableDeclarator));
+
+        if (node.kind === 'const') {
+          this._inferTypeFromConstAssignment(node);
+        }
         break;
       case 'VariableDeclarator':
         this.runOnNode(node.init);
+
         const existingType = node.scope.findTypeForName(node.id && node.id.name);
 
         if (node.id.type === 'Identifier' &&
@@ -89,6 +95,19 @@ export class TDTypeInferer {
         node.tdType.superTypeString = type.typeString;
       }
     }
+  }
+
+  static _inferTypeFromConstAssignment(node) {
+    node.declarations.forEach((variableDeclarator) => {
+      const existingType = variableDeclarator.scope.findTypeForName(variableDeclarator.id && variableDeclarator.id.name);
+
+      if (variableDeclarator.id.type === 'Identifier' &&
+        variableDeclarator.init &&
+        existingType &&
+        existingType.isAny) {
+        variableDeclarator.scope.updateDeclaration(new TDDeclaration(findTypeForNode(variableDeclarator.init), variableDeclarator.id.name));
+      }
+    });
   }
 
   static _inferTypesInParams(node) {

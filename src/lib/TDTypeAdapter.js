@@ -14,18 +14,25 @@ const JSDOC_SINGLE_CLASS_REGEX = /@class\s*([^\s\]]+)/;
 const JSDOC_MEMBEROF_REGEX = /@memberof\s*([^\s\]]+)/i;
 const JSDOC_RETURNS_REGEX = /@returns\s*\{([^\}]+)\}/;
 
+let adapterCache = {};
+export function clearCache() {
+  adapterCache = {};
+}
 export class TDTypeAdapter {
   constructor(ast) {
     this._ast = ast;
 
     this._globalClasses = {};
+    adapterCache[this._ast.file] = this;
+
     this._typeDefs = this._findTypeDefComments(this._ast);
     this._classDefs = this._findClassDefComments(this._ast);
     this._jsDocDefs = this._findJSDocDefComments(this._ast);
+
+    this._assignDeclarationTypes(this._ast);
   }
 
   get ast() {
-    this._assignDeclarationTypes(this._ast);
     return this._ast;
   }
 
@@ -140,26 +147,29 @@ export class TDTypeAdapter {
 
     if (foundType) {
       const paramStrings = foundType.value.match(JSDOC_PARAMS_REGEX) || [];
-      const returns = (foundType.value.match(JSDOC_RETURNS_REGEX) || [])[1];
+      const returns = (foundType.value.match(JSDOC_RETURNS_REGEX) || [])[1] || 'any';
 
-      let signature = [];
+      let signature = node.params.map((param) => {
+        const matchingDoc = paramStrings.find((paramString) => param.name === paramString.match(JSDOC_SINGLE_PARAM_REGEX)[2]);
 
-      paramStrings.forEach((paramString) => {
-        const paramStringMatch = paramString.match(JSDOC_SINGLE_PARAM_REGEX);
-        const param = node.params.find((functionParam) => functionParam.name === paramStringMatch[2]);
-
-        if (param) {
-          signature = signature.concat(paramStringMatch[1]);
+        if (matchingDoc) {
+          const paramStringMatch = matchingDoc.match(JSDOC_SINGLE_PARAM_REGEX);
           param.tdType = new TDType(paramStringMatch[1]);
+          return paramStringMatch[1];
         } else {
-          console.log('undocumented param:', paramString);
+          param.tdType = TDType.any();
+          return 'any';
         }
       });
 
       signature = signature.concat([returns]);
 
       node.tdType = new TDType(signature.join(' -> '));
-      node.id.tdType = node.tdType;
+
+      // Anonymous functions won't have id defined.
+      if (node.id) {
+        node.id.tdType = node.tdType;
+      }
     }
   }
 
@@ -172,15 +182,14 @@ export class TDTypeAdapter {
     });
 
     if (foundType) {
-      const paramStrings = foundType.value.match(JSDOC_PARAMS_REGEX);
-      const returns = (foundType.value.match(JSDOC_RETURNS_REGEX) || [])[1];
+      const paramStrings = foundType.value.match(JSDOC_PARAMS_REGEX) || [];
+      const returns = (foundType.value.match(JSDOC_RETURNS_REGEX) || [])[1] || 'any';
       const memberMatch = foundType.value.match(JSDOC_MEMBEROF_REGEX);
       const memberString = memberMatch && memberMatch[1];
       const ownerClass = this._globalClasses[memberString];
 
       let signature = [];
 
-      debugger;
       paramStrings.forEach((paramString) => {
         const paramStringMatch = paramString.match(JSDOC_SINGLE_PARAM_REGEX);
         const param = node.value.params.find((functionParam) => functionParam.name === paramStringMatch[2]);
@@ -267,7 +276,7 @@ export class TDTypeAdapter {
     const relevantImport = imports.find((anImport) => anImport.source === node.source);
 
     // Add types to the new tree
-    const importTypeAdapter = new TDTypeAdapter(relevantImport.ast);
+    const importTypeAdapter = adapterCache[relevantImport.ast.file] || new TDTypeAdapter(relevantImport.ast);
     const importAst = importTypeAdapter.ast;
   }
 
@@ -285,7 +294,7 @@ export class TDTypeAdapter {
 
     if (relevantImport) {
       // Add types to the new tree
-      const importTypeAdapter = new TDTypeAdapter(relevantImport.ast);
+      const importTypeAdapter = adapterCache[relevantImport.ast.file] || new TDTypeAdapter(relevantImport.ast);
       const importAst = importTypeAdapter.ast;
     }
   }

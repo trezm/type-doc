@@ -10,7 +10,11 @@ export const DEFAULT_OPTIONS = {
   sourceType: 'module'
 };
 
-const astCache = {};
+let astCache = {};
+export function clearCache() {
+  astCache = {};
+}
+
 export class TDASTGenerator {
   constructor(entryFile /* t:String */, options=DEFAULT_OPTIONS) {
     options = Object.assign(Object.assign({}, DEFAULT_OPTIONS), options);
@@ -28,6 +32,11 @@ export class TDASTGenerator {
 
     this._options = options;
     this._ast;
+    this._generateAst();
+  }
+
+  get ast() {
+    return this._ast;
   }
 
   /**
@@ -35,7 +44,7 @@ export class TDASTGenerator {
    * respective "program" node ASTs are added to an `imports` property on the
    * returned ast.
    */
-  get ast() /* t:Object */ {
+  _generateAst() /* t:Object */ {
     let rootAst /* t:Object */;
 
     if (this._ast) {
@@ -110,8 +119,8 @@ export class TDASTGenerator {
     importList = importList
       .map((_import) => {
         const path = pathArray.concat([_import.source.value.replace(/^\.\//, '')]).join('/');
-        // let astGenerator = astCache[resolve(path)] = astCache[resolve(path)] || new TDASTGenerator(path);
-        let astGenerator = /*astCache[resolve(path)] = astCache[resolve(path)] ||*/ new TDASTGenerator(path);
+        let astGenerator = astCache[resolve(path)] = astCache[resolve(path)] || new TDASTGenerator(path);
+        // let astGenerator = /*astCache[resolve(path)] = astCache[resolve(path)] ||*/ new TDASTGenerator(path);
 
         return {
           astGenerator: astGenerator,
@@ -132,7 +141,11 @@ export class TDASTGenerator {
       .map((_requires) => {
         const source = _requires.init.arguments[0].value.replace(/^\.\//, '');
         const pathArray = pathBase.concat([source]);
-        const astGenerator = new TDASTGenerator(pathArray.join('/'));
+        // const astGenerator = new TDASTGenerator(pathArray.join('/'));
+
+        const path = pathArray.join('/');
+        let astGenerator = astCache[resolve(path)] = astCache[resolve(path)] || new TDASTGenerator(path);
+
         return {
           astGenerator: astGenerator,
           ast: astGenerator.ast,

@@ -1,6 +1,9 @@
 import { sandbox as s, stub } from 'sinon';
 import { expect } from 'chai';
-import { TDTypeChecker } from '../lib/TDTypeChecker';
+import {
+  TDTypeChecker,
+  clearCache
+} from '../lib/TDTypeChecker';
 import * as fs from 'fs';
 import * as fsWrapper from '../loader/file/fsWrapper';
 
@@ -13,6 +16,7 @@ describe('import', () => {
 
   afterEach(() => {
     sandbox.restore();
+    clearCache();
   });
 
   it('should not throw an error with multiple files', () => {

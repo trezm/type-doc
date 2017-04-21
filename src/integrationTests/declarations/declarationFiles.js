@@ -1,6 +1,9 @@
 import { stub } from 'sinon';
 import { expect } from 'chai';
-import { TDTypeChecker } from '../../lib/TDTypeChecker';
+import {
+  TDTypeChecker,
+  clearCache
+} from '../../lib/TDTypeChecker';
 
 describe('[declarations] external files', () => {
   it('should be able import files based on the options', () => {

@@ -6,7 +6,7 @@ export class TDTypeToken {
   }
 }
 
-export function tokenizeString(inputString /* t:String */) /* t:Array TDTypeToken */ {
+export function tokenizeString(inputString='any' /* t:String */) /* t:Array TDTypeToken */ {
   inputString = inputString.trim();
   const existingTokens = [];
   const firstArrowIndex = inputString.indexOf('->');

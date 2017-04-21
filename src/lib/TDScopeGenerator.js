@@ -4,12 +4,24 @@ import { TDDeclaration } from './TDDeclaration';
 import { TDScope } from './TDScope';
 import { TDType } from './TDType';
 
+let generatedASTCache = {};
+let rootScope;
+export function clearCache() {
+  generatedASTCache = {};
+  rootScope = new TDScope();
+}
 export class TDScopeGenerator {
   constructor(ast) {
-    this.ast = ast;
+    // Lazily generate root scope so we take advantage of any variables
+    // defined in the config singleton.
+    if (!rootScope) { rootScope = new TDScope(); }
+    this.ast = generatedASTCache[ast.file] || ast;
+
+    generatedASTCache[this.ast.file] = this.ast;
+    this._postProcessingFunctions = [];
   }
 
-  _assignDeclarationTypes(node, existingScope=new TDScope()) {
+  _assignDeclarationTypes(node, existingScope=rootScope) {
     // TODO: Short circuit if for some reason there is no node
     if (!node) {
       return;
@@ -81,39 +93,47 @@ export class TDScopeGenerator {
         if (node.declaration) {
           this._assignDeclarationTypes(node.declaration, existingScope);
         } else {
-          const imports = this.ast.imports;
-          const relevantImport = imports.find((anImport) => anImport.source === node.source);
+          this._postProcessingFunctions.push(() => {
+            return ((_node) => {
+              const imports = this.ast.imports;
+              const relevantImport = imports.find((anImport) => anImport.source === _node.source);
 
-          new TDScopeGenerator(relevantImport.ast).generate(this.ast.scope);
+              relevantImport.ast = new TDScopeGenerator(relevantImport.ast).generate().ast;
 
-          node.specifiers
-            .filter((specifier) => specifier.imported || specifier.exported)
-            .forEach((specifier) => {
-              const type = this._findImportOrRequireForName((specifier.imported || specifier.exported).name, relevantImport);
+              _node.specifiers
+                .filter((specifier) => specifier.imported || specifier.exported)
+                .forEach((specifier) => {
+                  const type = this._findImportOrRequireForName((specifier.imported || specifier.exported).name, relevantImport);
 
-              if (type) {
-                existingScope.addDeclaration(new TDDeclaration(type, specifier.local.name));
-              }
-            });
+                  if (type) {
+                    existingScope.addDeclaration(new TDDeclaration(type, specifier.local.name));
+                  }
+                });
+            })(node);
+          });
         }
         return;
       }
       case 'ImportDeclaration': {
-        const imports = this.ast.imports;
-        const relevantImport = imports.find((anImport) => anImport.source === node.source);
+        this._postProcessingFunctions.push(() => {
+          return ((_node) => {
+            const imports = this.ast.imports;
+            const relevantImport = imports.find((anImport) => anImport.source === _node.source);
 
-        new TDScopeGenerator(relevantImport.ast).generate(this.ast.scope);
+            relevantImport.ast = new TDScopeGenerator(relevantImport.ast).generate().ast;
 
-        node.specifiers
-          .filter((specifier) => specifier.imported)
-          .forEach((specifier) => {
-            const type = this._findImportOrRequireForName(specifier.imported.name, relevantImport);
+            _node.specifiers
+              .filter((specifier) => specifier.imported)
+              .forEach((specifier) => {
+                const type = this._findImportOrRequireForName(specifier.imported.name, relevantImport);
 
-            if (type) {
-              existingScope.addDeclaration(new TDDeclaration(type, specifier.local.name));
-            }
-          });
-        return;
+                if (type) {
+                  existingScope.addDeclaration(new TDDeclaration(type, specifier.local.name));
+                }
+              });
+            return;
+          })(node);
+        });
       }
       case 'ImportSpecifier': {
         return;
@@ -127,20 +147,24 @@ export class TDScopeGenerator {
           node.init.callee &&
           node.init.callee.name === 'require' &&
           node.init.arguments[0].value) {
-          const importName = node.init.arguments[0] &&
-            node.init.arguments[0].value.replace(/^\.\//, '');
-          const imports = this.ast.imports;
-          const relevantImport = imports.find((anImport) => anImport.source === importName);
+          this._postProcessingFunctions.push(() => {
+            return ((_node) => {
+              const importName = _node.init.arguments[0] &&
+                _node.init.arguments[0].value.replace(/^\.\//, '');
+              const imports = this.ast.imports;
+              const relevantImport = imports.find((anImport) => anImport.source === importName);
 
-          if (relevantImport) {
-            new TDScopeGenerator(relevantImport.ast).generate(this.ast.scope);
-          }
+              if (relevantImport) {
+                relevantImport.ast = new TDScopeGenerator(relevantImport.ast).generate().ast;
+              }
 
-          const declaration = this._findImportOrRequireForName(undefined, relevantImport);
+              const type = this._findImportOrRequireForName(undefined, relevantImport);
 
-          if (declaration) {
-            existingScope.addDeclaration(new TDDeclaration(declaration.type, node.id.name));
-          }
+              if (type) {
+                existingScope.addDeclaration(new TDDeclaration(type, _node.id.name));
+              }
+            })(node);
+          });
         } else {
           const tdType = this._searchForNodeType(node);
           const tdDeclaration = new TDDeclaration(tdType, node.id.name);
@@ -155,7 +179,8 @@ export class TDScopeGenerator {
         return;
       }
       case 'AssignmentExpression':
-      case 'BinaryExpression': {
+      case 'BinaryExpression':
+      case 'LogicalExpression': {
         this._assignDeclarationTypes(node.left, existingScope);
         this._assignDeclarationTypes(node.right, existingScope);
         return;
@@ -184,8 +209,15 @@ export class TDScopeGenerator {
     }
   }
 
-  generate(parentScope /* t:TDScope */) /* t:TDScope */ {
-    this._assignDeclarationTypes(this.ast, parentScope);
+  generate(parentScope /* t:TDScope */) /* t:TDScopeGenerator */ {
+    if (!this.ast.hasGeneratedScopes) {
+      this.ast.hasGeneratedScopes = true;
+
+      this._assignDeclarationTypes(this.ast, parentScope);
+      this._postProcessingFunctions.forEach((fn) => fn());
+    }
+
+    return this;
   }
 
   /**
@@ -221,10 +253,10 @@ export class TDScopeGenerator {
    */
   _findImportOrRequireForName(name /* t:String */, relevantImport /* t:Object */) {
     if (!relevantImport) {
-      return new TDDeclaration(new TDType('any'), name);
+      return TDType.any();
     }
 
-    const declaration = relevantImport
+    const type = relevantImport
       .ast
       .body
       .map((statement) => {
@@ -246,7 +278,7 @@ export class TDScopeGenerator {
       })
       .find((exists) => exists);
 
-    return declaration;
+    return type;
   }
 
   /**

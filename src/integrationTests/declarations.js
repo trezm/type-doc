@@ -110,4 +110,16 @@ var hi /* t:Number */ = aNumber;
       expect(errors.length).to.equal(0);
     });
   });
+
+  describe('with const', () => {
+    it('should assign the type of the right hand to the left hand variable', () => {
+      const errors = new TDTypeChecker(`
+const greeting = 'hello';
+var hi /* t:Number */ = greeting;
+`).run();
+
+      expect(errors[0].extras.expectedType).to.equal('Number');
+      expect(errors[0].extras.actualType).to.equal('String');
+    });
+  })
 });
