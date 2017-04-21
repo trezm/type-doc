@@ -2,6 +2,7 @@
 
 import { TDType } from './TDType';
 import { TDClassType } from './TDClassType';
+import { mergeTypes } from './TDTypeStringTokenizer';
 
 export function findTypeForNode(node, scope) {
   let tdDeclaration;
@@ -103,7 +104,7 @@ export function findTypeForNode(node, scope) {
       }
 
       if (!type) {
-        returnType = findTypeForNode(node.callee);
+        returnType = findTypeForNode(node.callee, node.callee.scope || scope);
       }
 
       signature = (type && type.typeString.split(' -> ')) ||

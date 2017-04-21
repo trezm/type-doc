@@ -57,7 +57,9 @@ export class TDTypeInferer {
 
         const paramTypes = node.params.map((param) => node.scope.findTypeForName(param.name).typeString);
 
-        node.tdType = new TDType(paramTypes.concat([node.tdType.typeList[node.tdType.typeList.length - 1]]).join(' -> '));
+        node.tdType = new TDType(paramTypes.concat([
+          node.tdType && node.tdType.typeList[node.tdType.typeList.length - 1] || 'any'
+        ]).join(' -> '));
         break;
       }
       case 'VariableDeclaration':
@@ -140,7 +142,7 @@ export class TDTypeInferer {
           const leftType = scope.findTypeForName(assignmentStatement.left.name);
           const rightType = scope.findTypeForName(assignmentStatement.right.name);
 
-          if (!leftType.isAny && rightType.isAny) {
+          if (!leftType.isAny && (rightType.isAny || TDType.isNonSpecified(rightType))) {
             scope.updateDeclaration(new TDDeclaration(leftType, assignmentStatement.right.name));
           }
         }

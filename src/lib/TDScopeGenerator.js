@@ -147,6 +147,8 @@ export class TDScopeGenerator {
           node.init.callee &&
           node.init.callee.name === 'require' &&
           node.init.arguments[0].value) {
+          node.init.scope = existingScope;
+
           this._postProcessingFunctions.push(() => {
             return ((_node) => {
               const importName = _node.init.arguments[0] &&

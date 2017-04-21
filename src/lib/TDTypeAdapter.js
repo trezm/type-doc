@@ -313,6 +313,11 @@ export class TDTypeAdapter {
   }
 
   _addTypeToFunction(node, identifier) {
+    if (!identifier) {
+      node.tdType = TDType.any();
+      return;
+    }
+
     const foundType = this._typeDefs.find((typeDef) => {
       const lastParam = node.params[node.params.length - 1];
       const lastParamTypeString = lastParam &&

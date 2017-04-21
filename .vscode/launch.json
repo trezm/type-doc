@@ -8,7 +8,7 @@
       "program": "${workspaceRoot}/bin/type-doc",
       "stopOnEntry": false,
       "args": [
-        "../consumer-web/src/controllers/api/v4/shortcodes.js"
+        "../consumer-web/test/integration/controllers/v4/shortcodesSpec.js"
       ],
       "cwd": "${workspaceRoot}",
       "preLaunchTask": "build:dev",

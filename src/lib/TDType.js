@@ -6,6 +6,8 @@ import {
   tokenizeString
 } from './TDTypeStringTokenizer';
 
+const UUID_REGEX = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+
 /**
  * class :: TDType
  *   typeString :: String
@@ -64,6 +66,10 @@ export class TDType {
     return new TDType();
   }
 
+  static isNonSpecified(type /* t:TDType */) /* t:Boolean */ {
+    return UUID_REGEX.test(type.typeString);
+  }
+
   get isGeneric() /* t:Boolean */ {
     return this.typeList
       .map((type) => type.split(' ').map((part) => part.trim()))
@@ -98,6 +104,10 @@ export class TDType {
     this.typeList
       .forEach((typeString, index) => {
         const extractingTypeString = type.typeList[index];
+
+        if (!extractingTypeString) {
+          return;
+        }
 
         const typeStringParts = typeString.split(' ');
         const extractingTypeStringParts = extractingTypeString.split(' ');
