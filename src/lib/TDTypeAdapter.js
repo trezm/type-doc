@@ -197,7 +197,8 @@ export class TDTypeAdapter {
         if (param) {
           signature = signature.concat(paramStringMatch[1]);
         } else {
-          console.log('undocumented param:', paramString);
+          // console.log('undocumented param:', paramString);
+          // annoying... ignore this.
         }
       });
 

@@ -17,7 +17,8 @@ export class TDTypeInferer {
 
   static runOnNode(node /* t:any */) /* t:any */ {
     switch (node && node.type) {
-      case 'Program': {
+      case 'Program':
+      case 'BlockStatement': {
         node.body.forEach((_node) => this.runOnNode(_node));
         break;
       }
@@ -62,6 +63,9 @@ export class TDTypeInferer {
         ]).join(' -> '));
         break;
       }
+      case 'FunctionDeclaration':
+        node.body.body.forEach((statement) => this.runOnNode(statement));
+        break;
       case 'VariableDeclaration':
         node.declarations.forEach((variableDeclarator) => this.runOnNode(variableDeclarator));
 
