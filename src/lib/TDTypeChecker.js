@@ -62,6 +62,39 @@ export class TDTypeChecker {
       options.clearCache = true;
     }
 
+    this._generateAST();
+
+    let errors = errorCache[this._ast.file] || this._checkNode(this._ast, []);
+    errorCache[this._ast.file] = errors;
+
+    errors = errors.concat((this._ast.imports || [])
+      .map((importedTree) => {
+        return errorCache[importedTree.ast.file] || new TDTypeChecker(importedTree.ast.file, importedTree.ast).run(options);
+      })
+      .reduce((a, b) => a.concat(b), []));
+
+    profile('Type Checking', options.showProfiling);
+    return errors;
+  }
+
+  runSingleFile(options=DEFAULT_OPTIONS) {
+    options = Object.assign({}, Object.assign({}, DEFAULT_OPTIONS), options);
+
+    Object.getOwnPropertyNames(options).forEach((key) => config[key] = options[key]);
+
+    this.options = Object.assign(Object.assign({}, DEFAULT_OPTIONS), options);
+
+    if (!options.clearCache) {
+      clearCache();
+      options.clearCache = true;
+    }
+
+    this._generateAST();
+
+    return this._checkNode(this._ast, []);
+  }
+
+  _generateAST() {
     let ast = this._ast;
     let tdTypeAdapter;
 
@@ -71,31 +104,19 @@ export class TDTypeChecker {
       ast = tdAstGenerator.ast;
       ast.file = resolve(this._file);
     }
-    profile('AST Generation', options.showProfiling);
+    profile('AST Generation', this.options.showProfiling);
 
     tdTypeAdapter = new TDTypeAdapter(ast);
     ast = tdTypeAdapter.ast;
     this._ast = ast;
 
-    profile('Type Adaptation', options.showProfiling);
+    profile('Type Adaptation', this.options.showProfiling);
     new TDScopeGenerator(ast).generate(ast.scope);
 
-    profile('Scope Generation', options.showProfiling);
+    profile('Scope Generation', this.options.showProfiling);
     this._ast = TDTypeInferer.run(this._ast);
 
-    profile('Type Inference', options.showProfiling);
-
-    let errors = errorCache[ast.file] || this._checkNode(ast, []);
-    errorCache[ast.file] = errors;
-
-    errors = errors.concat((ast.imports || [])
-      .map((importedTree) => {
-        return errorCache[importedTree.ast.file] || new TDTypeChecker(importedTree.ast.file, importedTree.ast).run(options);
-      })
-      .reduce((a, b) => a.concat(b), []));
-
-    profile('Type Checking', options.showProfiling);
-    return errors;
+    profile('Type Inference', this.options.showProfiling);
   }
 
   _checkNode(node, errors=[]) {
