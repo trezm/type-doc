@@ -68,6 +68,7 @@ export class TDTypeInferer {
         if (node.kind === 'const') {
           this._inferTypeFromConstAssignment(node);
         }
+
         break;
       case 'VariableDeclarator':
         this.runOnNode(node.init);
@@ -104,6 +105,7 @@ export class TDTypeInferer {
       const existingType = variableDeclarator.scope.findTypeForName(variableDeclarator.id && variableDeclarator.id.name);
 
       if (variableDeclarator.id.type === 'Identifier' &&
+        (!variableDeclarator.id.tdType || variableDeclarator.id.tdType.isAny) &&
         variableDeclarator.init &&
         existingType &&
         existingType.isAny) {
@@ -114,6 +116,7 @@ export class TDTypeInferer {
 
   static _inferTypesInParams(node) {
     const body = node.body && node.body.body || [node.body];
+
     node.params
       .forEach((param, index) => {
         const type = (!param.tdType || param.tdType.isAny) ? new TDType(node.tdType.typeList[index]) : param.tdType;

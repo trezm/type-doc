@@ -203,7 +203,8 @@ function _makeType(node) /* t:String */ {
   if (node.type &&  _typeStringFromKind(node.type, node.typeParameters) === 'FunctionType') {
     type = node.type.parameters.map(_getSignatureFromParameter).join(' -> ') + ' -> ';
     if (node.type.type && node.type.type.typeName) {
-      type += node.type.type.typeName.text.toLowerCase();
+      // Note this probably need clean up
+      type += node.type.type.typeName.text ? node.type.type.typeName.text.toLowerCase() : 'any';
     } else {
       type += _typeStringFromKind(node.type.type);
     }

@@ -46,7 +46,8 @@ export class TDType {
     let alteredTypeString = typeString;
     if (!this.isAny) {
       Object.keys(genericMap)
-        .forEach((key) => alteredTypeString = alteredTypeString.replace(new RegExp(key, 'g'), genericMap[key]));
+        .forEach((key) => alteredTypeString = alteredTypeString.replace(new RegExp(`\\b\\(?${key}\\)?\\b`, 'g'), genericMap[key]));
+        // .forEach((key) => alteredTypeString = alteredTypeString.replace(new RegExp(`\b${key}`, 'g'), genericMap[key]));
     }
 
     this.typeString = alteredTypeString;
