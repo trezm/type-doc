@@ -18,6 +18,7 @@ export function clearCache() {
 export class TDASTGenerator {
   constructor(entryFile /* t:String */, options=DEFAULT_OPTIONS) {
     options = Object.assign(Object.assign({}, DEFAULT_OPTIONS), options);
+
     this._entryFile = entryFile;
 
     if (options.content) {
@@ -32,10 +33,13 @@ export class TDASTGenerator {
 
     this._options = options;
     this._ast;
-    this._generateAst();
   }
 
   get ast() {
+    if (!this._ast) {
+      this._generateAst();
+    }
+
     return this._ast;
   }
 
@@ -53,6 +57,7 @@ export class TDASTGenerator {
 
     try {
       rootAst = parse(this._entryFileContents, this._options);
+      this._ast = rootAst;
 
       const imports /* t:[Object] */ = this._findImports(rootAst);
       const importAsts /* t:[Object] */ = this._generateImportAsts(imports);
@@ -64,16 +69,16 @@ export class TDASTGenerator {
       const requiresAsts /* t:[Object] */ = this._generateRequiresAsts(requires);
 
       rootAst.imports = importAsts.concat(exportImportAsts).concat(requiresAsts);
-      rootAst.file = resolve(this._entryFile);
+      rootAst.file = fs.resolve(this._entryFile);
     } catch (e) {
       // For now, eat the errors, it's probably an external module.
       rootAst = {
         body: [],
         comments: []
       };
+      this._ast = rootAst;
     }
 
-    this._ast = rootAst;
     return rootAst;
   }
 
@@ -113,14 +118,14 @@ export class TDASTGenerator {
   }
 
   _generateImportAsts(importList /* t:[Object] */) /* t:[Object] */ {
-    const pathArray = this._entryFile.split('/');
+    const pathArray = fs.resolve(this._entryFile).split('/');
     pathArray.pop();
 
     importList = importList
       .map((_import) => {
         const path = pathArray.concat([_import.source.value.replace(/^\.\//, '')]).join('/');
-        let astGenerator = astCache[resolve(path)] = astCache[resolve(path)] || new TDASTGenerator(path);
-        // let astGenerator = /*astCache[resolve(path)] = astCache[resolve(path)] ||*/ new TDASTGenerator(path);
+        astCache[fs.resolve(path)] = astCache[fs.resolve(path)] || new TDASTGenerator(path);
+        let astGenerator = astCache[fs.resolve(path)];
 
         return {
           astGenerator: astGenerator,
@@ -134,17 +139,17 @@ export class TDASTGenerator {
   }
 
   _generateRequiresAsts(requiresList /* t:[Object] */) /* t:[Object] */ {
-    const pathBase = this._entryFile.split('/');
+    const pathBase = fs.resolve(this._entryFile).split('/');
     pathBase.pop();
 
     requiresList = requiresList
       .map((_requires) => {
         const source = _requires.init.arguments[0].value.replace(/^\.\//, '');
         const pathArray = pathBase.concat([source]);
-        // const astGenerator = new TDASTGenerator(pathArray.join('/'));
-
         const path = pathArray.join('/');
-        let astGenerator = astCache[resolve(path)] = astCache[resolve(path)] || new TDASTGenerator(path);
+
+        astCache[fs.resolve(path)] = astCache[fs.resolve(path)] || new TDASTGenerator(fs.resolve(path));
+        let astGenerator = astCache[fs.resolve(path)];
 
         return {
           astGenerator: astGenerator,

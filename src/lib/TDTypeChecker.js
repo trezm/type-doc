@@ -77,7 +77,12 @@ export class TDTypeChecker {
     return errors;
   }
 
-  runSingleFile(options=DEFAULT_OPTIONS) {
+  runSingleFile(file, options=DEFAULT_OPTIONS) {
+    if (file) {
+      this._file = file;
+      this._ast = null;
+    }
+
     options = Object.assign({}, Object.assign({}, DEFAULT_OPTIONS), options);
 
     Object.getOwnPropertyNames(options).forEach((key) => config[key] = options[key]);

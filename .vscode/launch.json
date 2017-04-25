@@ -22,6 +22,24 @@
       "outDir": null
     },
     {
+      "name": "Launch test thing",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceRoot}/test.js",
+      "stopOnEntry": false,
+      "args": [],
+      "cwd": "${workspaceRoot}",
+      "preLaunchTask": "build:dev",
+      "runtimeExecutable": null,
+      "runtimeArgs": [],
+      "env": {
+        "NODE_ENV": "test"
+      },
+      "console": "internalConsole",
+      "sourceMaps": true,
+      "outDir": null
+    }
+    {
       "name": "Attach",
       "type": "node",
       "request": "attach",

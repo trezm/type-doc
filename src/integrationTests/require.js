@@ -11,6 +11,9 @@ describe('require', () => {
 
   beforeEach(() => {
     sandbox = s.create();
+    sandbox.stub(fs, 'resolve', (arg) => {
+      return arg;
+    });
   });
 
   afterEach(() => {

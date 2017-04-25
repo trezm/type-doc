@@ -12,6 +12,9 @@ describe('import', () => {
 
   beforeEach(() => {
     sandbox = s.create();
+    sandbox.stub(fsWrapper, 'resolve', (arg) => {
+      return arg;
+    });
   });
 
   afterEach(() => {

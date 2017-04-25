@@ -1,4 +1,9 @@
 import * as fs from 'fs';
+import { resolve as _resolve } from 'path';
+
+export function resolve(path) {
+  return _resolve(path);
+}
 
 export function readFileSync(name /* t:String */) /* t:String */ {
   name = _isADirectoryWithAnIndex(name) || _isAJsFile(name);

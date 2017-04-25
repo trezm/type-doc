@@ -6,10 +6,12 @@ const exec = require('child_process').exec;
 
 gulp.task('build:dev', () => {
   return gulp.src('src/**/*.js')
+    .pipe(plugins.sourcemaps.init())
     .pipe(plugins.babel({
       presets: ['es2015'],
-      sourceMaps: 'inline'
+      sourceMaps: 'both'
     }))
+    .pipe(plugins.sourcemaps.write('.'))
     .pipe(gulp.dest('dist'));
 });
 
