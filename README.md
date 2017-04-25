@@ -10,6 +10,9 @@ Type checking with valid JavaScript
 - [What Works?](#what-works-right-now)
 
 ## Introduction
+
+_Warning:_ TypeDoc is still very much in development and there are definitely plenty of bugs.
+
 TypeDoc aims to provide a static type checking without changing JavaScript. This is accomplished by adding type annotations via comments near declarations.
 
 Take, for example, the following function to apply a transform to an input. There is an error in that `results` is defined as a `String`, yet is getting assigned a `Number`. TypeDoc aims to catch errors like this during static analysis rather than waiting until run time.
