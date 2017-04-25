@@ -24,6 +24,8 @@ const results /* t:String */ = transform(aNumber, (theNumber) => theNumber);
 
 ```
 
+Still not sure? Check out the [vs-code extension](https://marketplace.visualstudio.com/items?itemName=Trezm.type-doc-vscode)!
+
 ## Setup
 
 ### Install dependencies
