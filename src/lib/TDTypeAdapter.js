@@ -13,6 +13,7 @@ const JSDOC_SINGLE_PARAM_REGEX = /@param\s*\{([^\}]+)\}\s*\[?([^\s\]]+)\]?/;
 const JSDOC_SINGLE_CLASS_REGEX = /@class\s*([^\s\]]+)/;
 const JSDOC_MEMBEROF_REGEX = /@memberof\s*([^\s\]]+)/i;
 const JSDOC_RETURNS_REGEX = /@returns\s*\{([^\}]+)\}/;
+const JSDOC_TYPE_REGEX = /@type\s*\{([^\}]+)\}/;
 
 let adapterCache = {};
 export function clearCache() {
@@ -104,8 +105,10 @@ export class TDTypeAdapter {
         } else if (node.init) {
           this._assignDeclarationTypes(node.init);
           this._addTypeToDeclarator(node);
+          this._addJSDocTypeToDeclarator(node);
         } else {
           this._addTypeToDeclarator(node);
+          this._addJSDocTypeToDeclarator(node);
         }
         return;
       }
@@ -127,7 +130,6 @@ export class TDTypeAdapter {
       }
       case 'ImportSpecifier': {
         throw new Error('Unhandled ImportSpecifier');
-        return;
       }
       default:
         return;
@@ -137,6 +139,21 @@ export class TDTypeAdapter {
   /**
    * New single node methods
    */
+  _addJSDocTypeToDeclarator(node) {
+    const foundType = this._jsDocDefs.find((typeDef) => {
+      const commentEndLine = typeDef.loc.end.line;
+      const declaratorStartLine = node.loc.start.line;
+
+      return declaratorStartLine === commentEndLine + 1;
+    });
+
+    if (foundType) {
+      const type = (foundType.value.match(JSDOC_TYPE_REGEX) || [])[1] || 'any';
+
+      node.tdType = new TDType(type);
+    }
+  }
+
   _addJSDocTypeToFunction(node) {
     const foundType = this._jsDocDefs.find((typeDef) => {
       const commentEndLine = typeDef.loc.end.line;
@@ -367,8 +384,9 @@ export class TDTypeAdapter {
         const classes = comment.value.match(JSDOC_CLASSES_REGEX);
         const params = comment.value.match(JSDOC_PARAMS_REGEX);
         const returns = comment.value.match(JSDOC_RETURNS_REGEX);
+        const types = comment.value.match(JSDOC_TYPE_REGEX);
 
-        return classes || params || returns;
+        return classes || params || returns || types;
       });
   }
 

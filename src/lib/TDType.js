@@ -7,6 +7,8 @@ import {
 } from './TDTypeStringTokenizer';
 
 const UUID_REGEX = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+const PRIMITIVES = new Set(['number', 'string', 'object']);
+const CAPITALIZED_PRIMITIVES = new Set(['Number', 'String', 'Object']);
 
 /**
  * class :: TDType
@@ -43,6 +45,8 @@ export class TDType {
       throw new Error('must be string or TDType');
     }
 
+    typeString = CAPITALIZED_PRIMITIVES.has(typeString) ? typeString.toLowerCase() : typeString;
+
     let alteredTypeString = typeString;
     if (!this.isAny) {
       Object.keys(genericMap)
@@ -60,7 +64,7 @@ export class TDType {
       .split(' ')
       .map((part) => part.trim());
 
-    return splitParts.some((part) => part === part.toLowerCase());
+    return splitParts.some((part) => !PRIMITIVES.has(part) && part === part.toLowerCase());
   }
 
   static any() /* t:TDType */ {
@@ -75,7 +79,7 @@ export class TDType {
     return this.typeList
       .map((type) => type.split(' ').map((part) => part.trim()))
       .reduce((a, b) => a.concat(b), [])
-      .some((part) => part === part.toLowerCase());
+      .some((part) => !PRIMITIVES.has(part) && part === part.toLowerCase());
   }
 
   get types() /* t:Array TDType */ {
@@ -86,7 +90,7 @@ export class TDType {
     return this.typeList
       .map((type) => type.split(' ').map((part) => part.trim()))
       .reduce((a, b) => a.concat(b), [])
-      .filter((part) => part === part.toLowerCase());
+      .filter((part) => !PRIMITIVES.has(part) && part === part.toLowerCase());
   }
 
   get typeList() /* t:Array String */ {
@@ -115,7 +119,7 @@ export class TDType {
 
         typeStringParts
           .forEach((part, index) => {
-            if (part === part.toLowerCase()) {
+            if (!PRIMITIVES.has(part) && part === part.toLowerCase()) {
               genericMap[part] = extractingTypeStringParts[index];
             }
           });

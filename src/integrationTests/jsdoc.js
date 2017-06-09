@@ -3,6 +3,27 @@ import { expect } from 'chai';
 import { TDTypeChecker } from '../lib/TDTypeChecker';
 
 describe('jsdoc', () => {
+  describe('types', () => {
+    it('should properly assign types from multiline jsdoc types', () => {
+      const errors = new TDTypeChecker(`
+/**
+ * @type {number}
+ */
+const n = 1;
+
+/**
+ * @type {string}
+ */
+const s = n;
+`).run();
+
+      expect(errors).to.exist;
+      expect(errors.length).to.equal(1);
+      expect(errors[0].extras.expectedType).to.equal('string');
+      expect(errors[0].extras.actualType).to.equal('number');
+    });
+  });
+
   describe('functions', () => {
     it('should properly recognize errors using jsdoc types', () => {
       const errors = new TDTypeChecker(`
