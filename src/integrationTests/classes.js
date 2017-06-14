@@ -8,11 +8,11 @@ describe('classes', () => {
 class TestClass {
   constructor() {}
 
-  aGoodMethod1(s /* t:String */) /* t:String */ {
+  aGoodMethod1(s /* t:string */) /* t:string */ {
     return s;
   }
 
-  aGoodMethod2(s /* t:String */) /* t:String */ {
+  aGoodMethod2(s /* t:string */) /* t:string */ {
     return this.aGoodMethod1(s);
   }
 }
@@ -26,18 +26,18 @@ class TestClass {
 class TestClass {
   constructor() {}
 
-  aBadMethod(s /* t:String */) /* t:String */ {
+  aBadMethod(s /* t:string */) /* t:string */ {
     return s;
   }
 
-  toNumber(s /* t:String */) /* t:Number */ {
+  tonumber(s /* t:string */) /* t:number */ {
     return this.aBadMethod(s);
   }
 }
 `).run();
 
-    expect(errors[0].extras.expectedType).to.equal('Number');
-    expect(errors[0].extras.actualType).to.equal('String');
+    expect(errors[0].extras.expectedType).to.equal('number');
+    expect(errors[0].extras.actualType).to.equal('string');
   });
 
   it('should check method argument types', () => {
@@ -45,18 +45,18 @@ class TestClass {
 class TestClass {
   constructor() {}
 
-  aFineMethod(s /* t:String */) /* t:String */ {
+  aFineMethod(s /* t:string */) /* t:string */ {
     return s;
   }
 
-  toNumber(n /* t:Number */) /* t:Number */ {
+  tonumber(n /* t:number */) /* t:number */ {
     this.aFineMethod(n);
   }
 }
 `).run();
 
-    expect(errors[0].extras.expectedType).to.equal('String');
-    expect(errors[0].extras.actualType).to.equal('Number');
+    expect(errors[0].extras.expectedType).to.equal('string');
+    expect(errors[0].extras.actualType).to.equal('number');
   });
 
   it('should allow super/subclasses', () => {
@@ -87,15 +87,15 @@ const someClass /* t:SuperestClass */ = new SubClass();
       const errors = new TDTypeChecker(`
   /**
    * class :: TestClass
-   *   aString :: String
-   *   aGoodMethod :: String -> String
+   *   astring :: string
+   *   aGoodMethod :: string -> string
    */
   class TestClass {
     constructor() {
-      this.aString = 'hello';
+      this.astring = 'hello';
     }
 
-    aGoodMethod(s /* t:String */) /* t:String */ {
+    aGoodMethod(s /* t:string */) /* t:string */ {
       return s;
     }
   }
@@ -108,63 +108,63 @@ const someClass /* t:SuperestClass */ = new SubClass();
       const errors = new TDTypeChecker(`
   /**
    * class :: TestClass
-   *   aString :: String
-   *   aGoodMethod :: String -> Number
+   *   astring :: string
+   *   aGoodMethod :: string -> number
    */
   class TestClass {
     constructor() {
-      this.aString = 'hello';
+      this.astring = 'hello';
     }
 
-    aGoodMethod(s /* t:String */) /* t:String */ {
+    aGoodMethod(s /* t:string */) /* t:string */ {
       return s;
     }
   }
   `).run();
 
-      expect(errors[0].extras.expectedType).to.equal('String -> Number');
-      expect(errors[0].extras.actualType).to.equal('String -> String');
+      expect(errors[0].extras.expectedType).to.equal('string -> number');
+      expect(errors[0].extras.actualType).to.equal('string -> string');
     });
 
     it('should check against AOT property declarations', () => {
       const errors = new TDTypeChecker(`
   /**
    * class :: TestClass
-   *   aString :: String
-   *   aGoodMethod :: String -> String
+   *   astring :: string
+   *   aGoodMethod :: string -> string
    */
   class TestClass {
     constructor() {
-      this.aString = 1;
+      this.astring = 1;
     }
 
-    aGoodMethod(s /* t:String */) /* t:String */ {
+    aGoodMethod(s /* t:string */) /* t:string */ {
       return s;
     }
   }
   `).run();
 
-      expect(errors[0].extras.expectedType).to.equal('String');
-      expect(errors[0].extras.actualType).to.equal('Number');
+      expect(errors[0].extras.expectedType).to.equal('string');
+      expect(errors[0].extras.actualType).to.equal('number');
     });
 
     it('should throw an error in strict mode if it has an undeclared method', () => {
       const errors = new TDTypeChecker(`
   /**
    * class :: TestClass
-   *   aString :: String
-   *   aGoodMethod :: String -> String
+   *   astring :: string
+   *   aGoodMethod :: string -> string
    */
   class TestClass {
     constructor() {
-      this.aString = 'hello';
+      this.astring = 'hello';
     }
 
-    aGoodMethod(s /* t:String */) /* t:String */ {
+    aGoodMethod(s /* t:string */) /* t:string */ {
       return s;
     }
 
-    aBadMethod(s /* t:String */) /* t:String */ {
+    aBadMethod(s /* t:string */) /* t:string */ {
       return s;
     }
   }
@@ -180,16 +180,16 @@ const someClass /* t:SuperestClass */ = new SubClass();
       const errors = new TDTypeChecker(`
   /**
    * class :: TestClass
-   *   aString :: String
-   *   aGoodMethod :: String -> String
+   *   astring :: string
+   *   aGoodMethod :: string -> string
    */
   class TestClass {
     constructor() {
-      this.aString = 'hello';
-      this.anotherString = 'hello';
+      this.astring = 'hello';
+      this.anotherstring = 'hello';
     }
 
-    aGoodMethod(s /* t:String */) /* t:String */ {
+    aGoodMethod(s /* t:string */) /* t:string */ {
       return s;
     }
   }
@@ -197,7 +197,7 @@ const someClass /* t:SuperestClass */ = new SubClass();
         strictClassChecks: true
       });
 
-      expect(errors[0].extras.property).to.equal('anotherString');
+      expect(errors[0].extras.property).to.equal('anotherstring');
       expect(errors[0].extras.class).to.equal('TestClass');
     });
 
@@ -205,13 +205,13 @@ const someClass /* t:SuperestClass */ = new SubClass();
       const errors = new TDTypeChecker(`
   /**
    * class :: TestClass
-   *   aGoodMethod :: String -> String
+   *   aGoodMethod :: string -> string
    */
   class TestClass {
     constructor() {
     }
 
-    aGoodMethod(s /* t:String */) /* t:String */ {
+    aGoodMethod(s /* t:string */) /* t:string */ {
       return s;
     }
   }
@@ -230,21 +230,21 @@ const someClass /* t:SuperestClass */ = new SubClass();
       const errors = new TDTypeChecker(`
   /**
    * class :: TestClass
-   *   aString :: String
+   *   astring :: string
    */
   class TestClass {
     constructor() {
-      this.aString = 'hello';
+      this.astring = 'hello';
     }
   }
 
   const example /* t:TestClass */ = new TestClass();
-  example.aBadString = 'bye';
+  example.aBadstring = 'bye';
   `).run({
         strictClassChecks: true
       });
 
-      expect(errors[0].extras.property).to.equal('aBadString');
+      expect(errors[0].extras.property).to.equal('aBadstring');
       expect(errors[0].extras.class).to.equal('TestClass');
     });
 
@@ -252,39 +252,39 @@ const someClass /* t:SuperestClass */ = new SubClass();
       const errors = new TDTypeChecker(`
   /**
    * class :: TestClass
-   *   aGoodMethod :: String -> String
+   *   aGoodMethod :: string -> string
    */
   class TestClass {
     constructor() {
     }
 
-    aGoodMethod(s /* t:String */) /* t:String */ {
+    aGoodMethod(s /* t:string */) /* t:string */ {
       return s;
     }
   }
 
-  const aNumber /* t:Number */ = 2;
+  const anumber /* t:number */ = 2;
   const example /* t:TestClass */ = new TestClass();
-  const aString /* t:String */ = example.aGoodMethod(aNumber);
+  const astring /* t:string */ = example.aGoodMethod(anumber);
   `).run({
         strictClassChecks: true
       });
 
-      expect(errors[0].extras.expectedType).to.equal('String');
-      expect(errors[0].extras.actualType).to.equal('Number');
+      expect(errors[0].extras.expectedType).to.equal('string');
+      expect(errors[0].extras.actualType).to.equal('number');
     });
 
     it('should allow multiple levels of property access', () => {
       const errors = new TDTypeChecker(`
 /**
  * class :: TestClass
- *   aGoodMethod :: String -> String
+ *   aGoodMethod :: string -> string
  */
 class TestClass {
   constructor() {
   }
 
-  aGoodMethod(s /* t:String */) /* t:String */ {
+  aGoodMethod(s /* t:string */) /* t:string */ {
     return s;
   }
 }
@@ -299,9 +299,9 @@ class ContainerClass {
   }
 }
 
-const aNumber /* t:Number */ = 2;
+const anumber /* t:number */ = 2;
 const example /* t:ContainerClass */ = new ContainerClass();
-const aString /* t:String */ = example.testClass.aBadMethod(aNumber);
+const astring /* t:string */ = example.testClass.aBadMethod(anumber);
   `).run({
         strictClassChecks: true
       });

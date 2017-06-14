@@ -8,12 +8,12 @@ import {
 describe('[declarations] external files', () => {
   it('should be able import files based on the options', () => {
     const errors = new TDTypeChecker(`
-const someString /* t:String */ = stringToNumber('2');
+const somestring /* t:string */ = stringTonumber('2');
 `).run({
       definitionFiles: ['./src/integrationTests/test.d.ts']
     });
 
-    expect(errors[0].extras.expectedType).to.equal('String');
-    expect(errors[0].extras.actualType).to.equal('Number');
+    expect(errors[0].extras.expectedType).to.equal('string');
+    expect(errors[0].extras.actualType).to.equal('number');
   });
 });

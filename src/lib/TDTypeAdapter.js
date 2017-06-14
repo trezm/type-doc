@@ -1,6 +1,7 @@
 'use strict';
 
 import { TDClassType } from './TDClassType';
+import { TDInterfaceType } from './TDInterfaceType';
 import { TDScope } from './TDScope';
 import { TDType } from './TDType';
 
@@ -14,6 +15,9 @@ const JSDOC_SINGLE_CLASS_REGEX = /@class\s*([^\s\]]+)/;
 const JSDOC_MEMBEROF_REGEX = /@memberof\s*([^\s\]]+)/i;
 const JSDOC_RETURNS_REGEX = /@returns\s*\{([^\}]+)\}/;
 const JSDOC_TYPE_REGEX = /@type\s*\{([^\}]+)\}/;
+const JSDOC_TYPEDEF_REGEX = /@typedef\s*\{([^\}]+)\}\s*\[?([^\s\]]+)\]?/;
+const JSDOC_PROPERTY_REGEX = /@property\s*\{([^\}]+)\}\s*\[?([^\s\]]+)\]?/g;
+const JSDOC_SINGLE_PROPERTY_REGEX = /@property\s*\{([^\}]+)\}\s*\[?([^\s\]]+)\]?/;
 
 let adapterCache = {};
 export function clearCache() {
@@ -31,6 +35,7 @@ export class TDTypeAdapter {
     this._jsDocDefs = this._findJSDocDefComments(this._ast);
 
     this._assignDeclarationTypes(this._ast);
+    this._generateOrphanTypes(this._ast, this._jsDocDefs);
   }
 
   get ast() {
@@ -134,6 +139,31 @@ export class TDTypeAdapter {
       default:
         return;
     }
+  }
+
+  _generateOrphanTypes(ast, comments) {
+    comments
+      .filter((comment) => comment.value.match(JSDOC_TYPEDEF_REGEX))
+      .forEach((comment) => {
+        const typeString = (comment.value.match(JSDOC_TYPEDEF_REGEX) || [])[2];
+        const propComments = comment.value.match(JSDOC_PROPERTY_REGEX) || [];
+
+        const interfaceType = new TDInterfaceType(typeString);
+        propComments.map((propComment) => propComment.match(JSDOC_SINGLE_PROPERTY_REGEX) || [])
+          .filter((match) => match && match.length)
+          .forEach((match) => {
+            const typeString = match[1];
+            const name = match[2];
+
+            interfaceType.addPropertyOrMethod(name, typeString);
+          });
+
+        ast.orphanTypes = ast.orphanTypes || [];
+        ast.orphanTypes.push({
+          name: typeString,
+          type: interfaceType
+        });
+      });
   }
 
   /**
@@ -385,8 +415,9 @@ export class TDTypeAdapter {
         const params = comment.value.match(JSDOC_PARAMS_REGEX);
         const returns = comment.value.match(JSDOC_RETURNS_REGEX);
         const types = comment.value.match(JSDOC_TYPE_REGEX);
+        const typedefs = comment.value.match(JSDOC_TYPEDEF_REGEX);
 
-        return classes || params || returns || types;
+        return classes || params || returns || types || typedefs;
       });
   }
 

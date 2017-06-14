@@ -1,1 +1,1 @@
-declare function stringToNumber(s: string): number;
+declare function stringTonumber(s: string): number;

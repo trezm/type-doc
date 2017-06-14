@@ -10,10 +10,8 @@
     "docs": "gulp docs && node docs/src/server/server.js",
     "docs:devtool": "gulp docs && node_modules/.bin/devtool docs/src/server/server.js",
     "prepublish": "gulp release",
-    "profile": "",
     "test": "gulp test",
-    "start": "gulp; node dist/main.js",
-    "setup": "gulp build:dev; ./bin/build-parser.sh; gulp build:dev"
+    "start": "gulp; node dist/main.js"
   },
   "author": "",
   "license": "MIT",

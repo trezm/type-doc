@@ -7,8 +7,8 @@ import {
 } from './TDTypeStringTokenizer';
 
 const UUID_REGEX = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
-const PRIMITIVES = new Set(['number', 'string', 'object']);
-const CAPITALIZED_PRIMITIVES = new Set(['Number', 'String', 'Object']);
+const PRIMITIVES = new Set(['boolean', 'number', 'string', 'object']);
+const CAPITALIZED_PRIMITIVES = new Set(['Boolean', 'Number', 'String', 'Object']);
 
 /**
  * class :: TDType

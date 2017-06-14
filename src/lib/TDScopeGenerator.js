@@ -211,11 +211,17 @@ export class TDScopeGenerator {
     }
   }
 
+  _assignOrphanTypes(ast, scope=rootScope) {
+    (ast.orphanTypes || []).forEach((orphanType) => scope.addDeclaration(new TDDeclaration(orphanType.type, orphanType.name)));
+  }
+
   generate(parentScope /* t:TDScope */) /* t:TDScopeGenerator */ {
     if (!this.ast.hasGeneratedScopes) {
       this.ast.hasGeneratedScopes = true;
 
       this._assignDeclarationTypes(this.ast, parentScope);
+      this._assignOrphanTypes(this.ast, parentScope);
+
       this._postProcessingFunctions.forEach((fn) => fn());
     }
 

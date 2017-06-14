@@ -40,19 +40,19 @@ import { test } from './test';
   it('should throw errors caused by multiple files', () => {
     const readFileSyncStub = sandbox.stub(fsWrapper, 'readFileSync', (file) => {
       return {
-        './test': `export const test /* t:Number */ = 2;`,
+        './test': `export const test /* t:number */ = 2;`,
         './main': `
 import { test } from './test';
 
-var s /* t:String */ = test
+var s /* t:string */ = test
 `
       }[file];
     });
 
     const errors = new TDTypeChecker('./main').run();
 
-    expect(errors[0].extras.expectedType).to.equal('String');
-    expect(errors[0].extras.actualType).to.equal('Number');
+    expect(errors[0].extras.expectedType).to.equal('string');
+    expect(errors[0].extras.actualType).to.equal('number');
   });
 
   it('should respect namespaces across multiple files', () => {
@@ -61,13 +61,13 @@ var s /* t:String */ = test
         './test1': `
   /**
    * class :: someNamespace:TestClass
-   *   aGoodMethod :: String -> String
+   *   aGoodMethod :: string -> string
    */
   export class TestClass {
   constructor() {
   }
 
-  aGoodMethod(s /* t:String */) /* t:String */ {
+  aGoodMethod(s /* t:string */) /* t:string */ {
     return s;
   }
   }`,
@@ -95,30 +95,30 @@ var s /* t:String */ = test
     const readFileSyncStub = sandbox.stub(fsWrapper, 'readFileSync', (file) => {
       return {
         './test': `
-let aNumber /* t:Number */ = 3;
-export const test /* t:String */ = aNumber;
+let anumber /* t:number */ = 3;
+export const test /* t:string */ = anumber;
 `,
         './main': `
 import { test } from './test';
 
-var s /* t:String */ = test
+var s /* t:string */ = test
 `
       }[file];
     });
 
     const errors = new TDTypeChecker('./main').run();
 
-    expect(errors[0].extras.expectedType).to.equal('String');
-    expect(errors[0].extras.actualType).to.equal('Number');
+    expect(errors[0].extras.expectedType).to.equal('string');
+    expect(errors[0].extras.actualType).to.equal('number');
   });
 
   it('should handle multiple imports', () => {
     const readFileSyncStub = sandbox.stub(fsWrapper, 'readFileSync', (file) => {
       return {
         './test': `
-let aNumber /* t:Number */ = 3;
-export const test1 /* t:String */ = aNumber;
-export const test2 /* t:String */ = aNumber;
+let anumber /* t:number */ = 3;
+export const test1 /* t:string */ = anumber;
+export const test2 /* t:string */ = anumber;
 `,
         './main': `
 import { test1, test2 } from './test';
@@ -128,54 +128,54 @@ import { test1, test2 } from './test';
 
     const errors = new TDTypeChecker('./main').run();
 
-    expect(errors[0].extras.expectedType).to.equal('String');
-    expect(errors[0].extras.actualType).to.equal('Number');
-    expect(errors[1].extras.expectedType).to.equal('String');
-    expect(errors[1].extras.actualType).to.equal('Number');
+    expect(errors[0].extras.expectedType).to.equal('string');
+    expect(errors[0].extras.actualType).to.equal('number');
+    expect(errors[1].extras.expectedType).to.equal('string');
+    expect(errors[1].extras.actualType).to.equal('number');
   });
 
   it('should handle multiple with different types', () => {
     const readFileSyncStub = sandbox.stub(fsWrapper, 'readFileSync', (file) => {
       return {
         './test': `
-export const test1 /* t:String */ = 'asdf';
-export const test2 /* t:Number */ = 1;
+export const test1 /* t:string */ = 'asdf';
+export const test2 /* t:number */ = 1;
 `,
         './main': `
 import { test1, test2 } from './test';
 
-const thing1 /* t:Number */ = test1;
-const thing2 /* t:String */ = test2;
+const thing1 /* t:number */ = test1;
+const thing2 /* t:string */ = test2;
 `
       }[file];
     });
 
     const errors = new TDTypeChecker('./main').run();
 
-    expect(errors[0].extras.actualType).to.equal('String');
-    expect(errors[0].extras.expectedType).to.equal('Number');
-    expect(errors[1].extras.expectedType).to.equal('String');
-    expect(errors[1].extras.actualType).to.equal('Number');
+    expect(errors[0].extras.actualType).to.equal('string');
+    expect(errors[0].extras.expectedType).to.equal('number');
+    expect(errors[1].extras.expectedType).to.equal('string');
+    expect(errors[1].extras.actualType).to.equal('number');
   });
 
   it('should handle aliases with different types', () => {
     const readFileSyncStub = sandbox.stub(fsWrapper, 'readFileSync', (file) => {
       return {
         './test': `
-export const test1 /* t:String */ = 'asdf';
+export const test1 /* t:string */ = 'asdf';
 `,
         './main': `
 import { test1 as test2 } from './test';
 
-const thing1 /* t:Number */ = test2;
+const thing1 /* t:number */ = test2;
 `
       }[file];
     });
 
     const errors = new TDTypeChecker('./main').run();
 
-    expect(errors[0].extras.actualType).to.equal('String');
-    expect(errors[0].extras.expectedType).to.equal('Number');
+    expect(errors[0].extras.actualType).to.equal('string');
+    expect(errors[0].extras.expectedType).to.equal('number');
   });
 
   it('should handle class exports', () => {

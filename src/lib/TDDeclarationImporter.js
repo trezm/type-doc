@@ -245,11 +245,11 @@ function _typeStringFromKind(node /* t:any */, typeParameters /* t:any */) /* t:
 
   switch (tsKeyword) {
     case 'BooleanKeyword':
-      return 'Boolean';
+      return 'boolean';
     case 'NumberKeyword':
-      return 'Number';
+      return 'number';
     case 'StringKeyword':
-      return 'String';
+      return 'string';
     case 'AnyKeyword':
       return 'any';
     case 'VoidKeyword':

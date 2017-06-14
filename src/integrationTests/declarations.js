@@ -31,80 +31,80 @@ class TestClass {
 class TestClass {
   constructor() {}
 
-  aBadMethod(s /* t:String */) /* t:Number */ {
+  aBadMethod(s /* t:string */) /* t:number */ {
     return s;
   }
 }
 `).run();
 
-      expect(errors[0].extras.expectedType).to.equal('Number');
-      expect(errors[0].extras.actualType).to.equal('String');
+      expect(errors[0].extras.expectedType).to.equal('number');
+      expect(errors[0].extras.actualType).to.equal('string');
     });
   });
 
   describe('with functions', () => {
     it('should check the return type of the called expression', () => {
       const errors = new TDTypeChecker(`
-var hi /* t:Number */ = stringinator();
+var hi /* t:number */ = stringinator();
 
-function stringinator() /* t:String */ {
+function stringinator() /* t:string */ {
   return 'asdf';
 }
 `).run();
 
-      expect(errors[0].extras.expectedType).to.equal('Number');
-      expect(errors[0].extras.actualType).to.equal('String');
+      expect(errors[0].extras.expectedType).to.equal('number');
+      expect(errors[0].extras.actualType).to.equal('string');
     });
 
     it('should check the params of the called expression', () => {
       const errors = new TDTypeChecker(`
-var hi /* t:String */ = stringinator('1');
+var hi /* t:string */ = stringinator('1');
 
-function stringinator(n /* t:Number */) /* t:String */ {
+function stringinator(n /* t:number */) /* t:string */ {
   return '' + n;
 }
 `).run();
 
-      expect(errors[0].extras.expectedType).to.equal('Number');
-      expect(errors[0].extras.actualType).to.equal('String');
+      expect(errors[0].extras.expectedType).to.equal('number');
+      expect(errors[0].extras.actualType).to.equal('string');
     });
   });
 
   describe('with constants', () => {
     it('should check against string constants', () => {
       const errors = new TDTypeChecker(`
-var hi /* t:Number */ = 'asdf';
+var hi /* t:number */ = 'asdf';
 `).run();
 
-      expect(errors[0].extras.expectedType).to.equal('Number');
-      expect(errors[0].extras.actualType).to.equal('String');
+      expect(errors[0].extras.expectedType).to.equal('number');
+      expect(errors[0].extras.actualType).to.equal('string');
     });
 
-    it('should check against Number constants', () => {
+    it('should check against number constants', () => {
       const errors = new TDTypeChecker(`
-var bye /* t:String */ = 1;
+var bye /* t:string */ = 1;
 `).run();
 
-      expect(errors[0].extras.expectedType).to.equal('String');
-      expect(errors[0].extras.actualType).to.equal('Number');
+      expect(errors[0].extras.expectedType).to.equal('string');
+      expect(errors[0].extras.actualType).to.equal('number');
     });
   });
 
   describe('with variables', () => {
     it('should check against earlier assignments to the variable', () => {
       const errors = new TDTypeChecker(`
-var greeting /* t:String */ = 'hello'
-var hi /* t:Number */ = greeting;
+var greeting /* t:string */ = 'hello'
+var hi /* t:number */ = greeting;
 `).run();
 
-      expect(errors[0].extras.expectedType).to.equal('Number');
-      expect(errors[0].extras.actualType).to.equal('String');
+      expect(errors[0].extras.expectedType).to.equal('number');
+      expect(errors[0].extras.actualType).to.equal('string');
     });
 
     it('should respect multiple types', () => {
       const errors = new TDTypeChecker(`
-var aNumber /* t:String | Number */ = '1'
-var hi /* t:Number */ = aNumber;
+var anumber /* t:string | number */ = '1'
+var hi /* t:number */ = anumber;
 `).run();
 
       expect(errors.length).to.equal(0);
@@ -115,11 +115,11 @@ var hi /* t:Number */ = aNumber;
     it('should assign the type of the right hand to the left hand variable', () => {
       const errors = new TDTypeChecker(`
 const greeting = 'hello';
-var hi /* t:Number */ = greeting;
+var hi /* t:number */ = greeting;
 `).run();
 
-      expect(errors[0].extras.expectedType).to.equal('Number');
-      expect(errors[0].extras.actualType).to.equal('String');
+      expect(errors[0].extras.expectedType).to.equal('number');
+      expect(errors[0].extras.actualType).to.equal('string');
     });
   })
 });

@@ -8,7 +8,7 @@ describe('real world examples', () => {
 import { TDFunctionalChecker } from './lib/TDFunctionalChecker';
 import { TDTypeChecker } from './lib/TDTypeChecker';
 
-var s /* t:String */ = 4;
+var s /* t:string */ = 4;
 
 export function main(entryFile='./src/lib/TDScope', checkFunctional=false, options) {
   const tdTypeChecker = new TDTypeChecker(entryFile);
@@ -26,8 +26,8 @@ export function main(entryFile='./src/lib/TDScope', checkFunctional=false, optio
 }
 `).run();
 
-    expect(errors[0].extras.expectedType).to.equal('String');
-    expect(errors[0].extras.actualType).to.equal('Number');
+    expect(errors[0].extras.expectedType).to.equal('string');
+    expect(errors[0].extras.actualType).to.equal('number');
   });
 
   it('should be able to parse TDTypeChecker without an error', () => {
@@ -35,4 +35,30 @@ export function main(entryFile='./src/lib/TDScope', checkFunctional=false, optio
 
     expect(errors.length).to.equal(0);
   });
+
+  it.only('should respect typedefs', () => {
+    const errors = new TDTypeChecker(`
+/**
+ * @typedef {Object} Options
+ * @property {boolean} dryRun
+ * @property {number} prefix
+ */
+
+function main() {
+  /** @type {Options} */
+  let options = {
+    dryRun: false,
+    prefix: ''
+  };
+
+  /** @type {string} */
+  let someString = options.prefix;
+}
+`).run({
+      strictClassChecks: true
+    });
+
+    expect(errors[0].extras.expectedType).to.equal('string');
+    expect(errors[0].extras.actualType).to.equal('number');
+  })
 });

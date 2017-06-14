@@ -3,13 +3,13 @@ import { expect } from 'chai';
 import { TDTypeChecker } from '../lib/TDTypeChecker';
 
 describe('assignments', () => {
-  it('should detect errors with Numbers', () => {
+  it('should detect errors with numbers', () => {
     const errors = new TDTypeChecker(`
-var n /* t:Number */;
+var n /* t:number */;
 n = 'asdf';
 `).run();
 
-    expect(errors[0].extras.expectedType).to.equal('Number');
-    expect(errors[0].extras.actualType).to.equal('String');
+    expect(errors[0].extras.expectedType).to.equal('number');
+    expect(errors[0].extras.actualType).to.equal('string');
   });
 });

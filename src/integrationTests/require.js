@@ -40,43 +40,43 @@ const test = require('./test');
     const readFileSyncStub = sandbox.stub(fs, 'readFileSync', (file) => {
       return {
         './test': `
-const test /* t:Number */ = 2;
+const test /* t:number */ = 2;
 
 module.exports = test;`,
         './main': `
 const test = require('./test');
 
-var s /* t:String */ = test
+var s /* t:string */ = test
 `
       }[file];
     });
 
     const errors = new TDTypeChecker('./main').run();
 
-    expect(errors[0].extras.expectedType).to.equal('String');
-    expect(errors[0].extras.actualType).to.equal('Number');
+    expect(errors[0].extras.expectedType).to.equal('string');
+    expect(errors[0].extras.actualType).to.equal('number');
   });
 
   it('should run tests on the imported files', () => {
     const readFileSyncStub = sandbox.stub(fs, 'readFileSync', (file) => {
       return {
         './test': `
-let aNumber /* t:Number */ = 3;
-const test /* t:String */ = aNumber;
+let anumber /* t:number */ = 3;
+const test /* t:string */ = anumber;
 module.exports = test;
 `,
         './main': `
 const test = require('./test');
 
-var s /* t:String */ = test
+var s /* t:string */ = test
 `
       }[file];
     });
 
     const errors = new TDTypeChecker('./main').run();
 
-    expect(errors[0].extras.expectedType).to.equal('String');
-    expect(errors[0].extras.actualType).to.equal('Number');
+    expect(errors[0].extras.expectedType).to.equal('string');
+    expect(errors[0].extras.actualType).to.equal('number');
   });
 
   it('should allow requires not at the root level', () => {
