@@ -60,7 +60,15 @@ export function findTypeForNode(node, scope) {
       const leftType = findTypeForNode(node.left);
       const rightType = findTypeForNode(node.right);
 
-      return new TDType(mergeTypes(leftType && leftType.typeString, rightType && rightType.typeString));
+      if (node.operator === '||') {
+        return new TDType(mergeTypes(leftType && leftType.typeString, rightType && rightType.typeString));
+      } else if (node.operator === '&&') {
+        return rightType;
+      } else if (node.operator === '+' && (leftType.typeString === 'string' || rightType.typeString === 'string')) {
+        return new TDType('string');
+      } else {
+        return leftType;
+      }
     }
     case 'NewExpression': {
       const type = node.scope.findTypeForName(node.callee.name);
@@ -109,7 +117,12 @@ export function findTypeForNode(node, scope) {
 
       signature = (type && type.typeString.split(' -> ')) ||
         (returnType && returnType.typeString.split(' -> '));
-      returnType = signature && signature.pop();
+
+      if (signature && signature.length > 1) {
+        returnType = signature && signature.pop();
+      } else {
+        returnType = TDType.any();
+      }
 
       type && type.typeList.length > 1 && node.arguments.forEach((argument, index) => {
         const argumentDeclarationType = new TDType(findTypeForNode(argument, argument.scope || scope));
@@ -236,5 +249,5 @@ export function findReturnType(node, errors=[]) {
 }
 
 export function findTypeForExpression(expression) {
-  return findTypeForNode(expression.left);
+  return findTypeForNode(expression.right);
 }

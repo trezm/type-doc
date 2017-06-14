@@ -36,7 +36,7 @@ export function main(entryFile='./src/lib/TDScope', checkFunctional=false, optio
     expect(errors.length).to.equal(0);
   });
 
-  it.only('should respect typedefs', () => {
+  it('should respect typedefs', () => {
     const errors = new TDTypeChecker(`
 /**
  * @typedef {Object} Options
