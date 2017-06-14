@@ -292,7 +292,6 @@ export class TDTypeChecker {
       return errors;
     }
 
-    console.log('this.options.strictClassChecks:', this.options.strictClassChecks);
     if (!functionType &&
       !objectType.isAny &&
       this.options.strictClassChecks) {

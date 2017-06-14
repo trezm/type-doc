@@ -81,7 +81,12 @@ export class TDScopeGenerator {
 
         node.params.forEach((param) => {
           // TODO:Handle param defaults better
-          const paramDeclaration = new TDDeclaration(this._searchForNodeType(param), param.name || param.left.name);
+          let paramName;
+          if (param.argument && param.argument.name) { paramName = param.argument.name; }
+          if (param.name) { paramName = param.name; }
+          if (param.left && param.left.name) { paramName = param.left.name; }
+
+          const paramDeclaration = new TDDeclaration(this._searchForNodeType(param), paramName);
           scope.addDeclaration(paramDeclaration);
         });
 

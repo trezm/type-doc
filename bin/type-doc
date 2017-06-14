@@ -16,8 +16,8 @@ for (let i = 2; i < process.argv.length; i++) {
       break;
     }
     case '-s':
-    case '--strict-class-check': {
-      options.strictClassCheck = true;
+    case '--strict-class-checks': {
+      options.strictClassChecks = true;
       break;
     }
     case '-p':
