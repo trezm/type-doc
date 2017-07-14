@@ -48,7 +48,7 @@ function main() {
   /** @type {Options} */
   let options = {
     dryRun: false,
-    prefix: ''
+    prefix: 2
   };
 
   /** @type {string} */

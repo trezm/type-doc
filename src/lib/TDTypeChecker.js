@@ -276,6 +276,10 @@ export class TDTypeChecker {
   /**
    * New check methods
    */
+  _checkObjectExpression(node, errors=[]) {
+
+  }
+
   _checkMemberExpression(node, errors=[]) {
     let functionDeclaration;
     let functionType;
@@ -427,8 +431,10 @@ export class TDTypeChecker {
     return functionType && node.arguments.map((argument, index) => {
       // TODO: Short circuit if for some reason there is no argumentDeclarationType
       const argumentDeclarationType = findTypeForNode(argument, argument.scope || scope) || TDType.any();
-      const paramType = new TDType(functionType.typeList[index]);
+      let paramType = new TDType(functionType.typeList[index]);
       let genericsErrors = this._checkNode(argument);
+
+      paramType = scope.findTypeForName(paramType.typeString) || paramType;
 
       /* Assign any types to generics */
       if (paramType.typeList.length !== argumentDeclarationType.typeList.length) {
@@ -520,8 +526,8 @@ export class TDTypeChecker {
   _testTypes(expectedType=TDType.any() /* t:TDType */, actualType=TDType.any() /* t:TDType */, node /* t:Node */) /* t:TypeMismatchError? */ {
     if (!actualType.isSubclassOf(expectedType)) {
       return new TypeMismatchError(`Type mismatch in declaration on line ${node.loc.start.line}`, {
-        actualType: actualType.typeString,
-        expectedType: expectedType.typeString,
+        actualType: actualType.toString(),
+        expectedType: expectedType.toString(),
         file: this._ast.file,
         start: {
           line: node.loc.start.line,

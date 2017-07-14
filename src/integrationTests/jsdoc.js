@@ -48,7 +48,7 @@ const s = n;
    */
 
   /** @type {Options} */
-  const example = {};
+  const example = { someString: 'asdf' };
 
   /** @type {number} */
   const someNumber = example.someBadString;
@@ -68,7 +68,7 @@ const s = n;
    */
 
   /** @type {Options} */
-  const example = {};
+  const example = { someString: 'asdf' };
 
   /** @type {number} */
   const someNumber = example.someString;

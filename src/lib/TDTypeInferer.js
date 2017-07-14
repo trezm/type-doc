@@ -56,7 +56,7 @@ export class TDTypeInferer {
         this._inferTypesInParams(node);
         this._inferTypesFromBodyAssignments(node);
 
-        const paramTypes = node.params.map((param) => node.scope.findTypeForName(param.name).typeString);
+        const paramTypes = node.params.map((param) => (node.scope.findTypeForName(param.name) || TDType.any()).typeString);
 
         node.tdType = new TDType(paramTypes.concat([
           node.tdType && node.tdType.typeList[node.tdType.typeList.length - 1] || 'any'

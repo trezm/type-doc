@@ -5,12 +5,13 @@ import { mergeTypes } from './TDTypeStringTokenizer';
 
 /**
  * class :: TDClassType
+ *   any :: any -> TDClassType
  *   methods :: Array TDType
  *   properties :: Array TDType
  *   getPropertyTypeForName :: TDDeclaration
- *   addPropertyOrMethod :: String -> String -> TDClassType
- *   addMethodDeclaration :: String -> String -> TDClassType
- *   addPropertyDeclaration :: String -> String -> TDClassType
+ *   addPropertyOrMethod :: string -> string -> TDClassType
+ *   addMethodDeclaration :: string -> string -> TDClassType
+ *   addPropertyDeclaration :: string -> string -> TDClassType
  */
 export class TDClassType extends TDType {
   constructor(typeString /* t:String */) {
@@ -26,6 +27,30 @@ export class TDClassType extends TDType {
 
   get properties() {
     return Object.assign(Object.assign({}, this._properties), this._methods);
+  }
+
+  static any(node /* t:any */) /* t:TDClassType */ {
+    const anonymousType = new TDClassType();
+
+    node.properties
+      .filter((prop) => prop.kind === 'init')
+      .forEach((prop) => {
+        anonymousType.addPropertyOrMethod(prop.key.name, typeof prop.value.value);
+      });
+
+    return anonymousType;
+  }
+
+  toString() /* t:string */ {
+    if (this.isAny) {
+      const fakeObject = {};
+
+      Object.keys(this.properties || {})
+        .forEach((key) => fakeObject[key.replace(/^__/, '')] = this.properties[key].typeString);
+      return JSON.stringify(fakeObject);
+    } else {
+      return this.typeString;
+    }
   }
 
   addPropertyOrMethod(name /* t:String */, signature /* t:String */) /* t:TDClassType */ {
@@ -74,5 +99,23 @@ export class TDClassType extends TDType {
       });
 
     return this.methods[matchingKey];
+  }
+
+  isSubclassOf(otherType /* t:TDType */) /* t:boolean */ {
+    return (!this.isAny && !otherType.isAny && this.__proto__.__proto__.isSubclassOf(otherType)) || this.isDucktypeOf(otherType);
+  }
+
+  isDucktypeOf(otherType /* t:TDType */) /* t:boolean */ {
+    const hasRequiredTypes = true;
+
+    const missingType = Object.keys(otherType.properties || {})
+      .find((key) => {
+        const trimmedKey = key.replace(/^__/, '');
+        const thisPropertyType = this.getPropertyTypeForName(trimmedKey);
+
+        return !otherType.getPropertyTypeForName(trimmedKey).isSubclassOf(thisPropertyType);
+      });
+
+    return !Boolean(missingType);
   }
 }

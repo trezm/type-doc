@@ -211,7 +211,7 @@ export function findTypeForNode(node, scope) {
     }
     case 'ObjectExpression': {
       // TODO: Consider handling more strictly
-      return TDType.any();
+      return TDClassType.any(node);
     }
     case 'ArrayExpression': {
       return new TDType('Array any');

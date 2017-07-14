@@ -81,7 +81,7 @@ export class TDScope {
 
   findTypeForName(name /* t:String */, limitScope /* t:Boolean */) /* t:TDType */ {
     if (!name) {
-      return TDType.any();
+      return;
     }
 
     const nameSplit = _split(name);
@@ -89,8 +89,7 @@ export class TDScope {
 
     const type = (declaration && declaration.type) ||
       (!limitScope && this.parent && this.parent.findTypeForName(name)) ||
-      this.findTypeInNamespace(name) ||
-      TDType.any();
+      this.findTypeInNamespace(name);
 
     return type;
   }

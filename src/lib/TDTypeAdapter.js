@@ -383,10 +383,12 @@ export class TDTypeAdapter {
     });
 
     const type = foundType ? this._extractType(foundType.value, TYPEDEF_REGEX).typeString : 'any';
-    const paramTypes = (node.params || [new TDType()]).map((param) => {
+    let paramTypes = (node.params || [new TDType()]).map((param) => {
       const typeString = param.tdType.isAny ? 'any' : param.tdType.typeString;
       return typeString.indexOf('->') > -1 ? `(${typeString})` : typeString;
     });
+
+    if (!paramTypes.length) { paramTypes = ['any']; }
 
     node.tdType = new TDType(paramTypes.concat([type]).join(' -> '));
     if (identifier) {

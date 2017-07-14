@@ -17,12 +17,13 @@ const CAPITALIZED_PRIMITIVES = new Set(['Boolean', 'Number', 'String', 'Object']
  *   superTypeString :: [String]
  *   typeList :: Array String
  *   typeString :: String
- *   isGeneric :: Boolean
+ *   isGeneric :: boolean
  *   types :: Array TDType
  *   genericTypes :: Array String
- *   isOptional :: Boolean
+ *   isOptional :: boolean
  *   extractGenericMapGivenType :: TDType -> any
- *   isSubclassOf :: TDType -> Boolean
+ *   isSubclassOf :: TDType -> boolean
+ *   isDucktypeOf :: TDType -> boolean*
  */
 export class TDType {
   constructor(typeString='any' /* t:String */, genericMap={} /* t:any */) {
@@ -59,7 +60,7 @@ export class TDType {
     this.superType = this.superTypeString && new TDType(this.superTypeString);
   }
 
-  static testForGeneric(inputString /* t:String */) /* t:Boolean */ {
+  static testForGeneric(inputString /* t:String */) /* t:boolean */ {
     const splitParts = inputString
       .split(' ')
       .map((part) => part.trim());
@@ -71,11 +72,11 @@ export class TDType {
     return new TDType();
   }
 
-  static isNonSpecified(type /* t:TDType */) /* t:Boolean */ {
+  static isNonSpecified(type /* t:TDType */) /* t:boolean */ {
     return UUID_REGEX.test(type.typeString);
   }
 
-  get isGeneric() /* t:Boolean */ {
+  get isGeneric() /* t:boolean */ {
     return this.typeList
       .map((type) => type.split(' ').map((part) => part.trim()))
       .reduce((a, b) => a.concat(b), [])
@@ -103,6 +104,10 @@ export class TDType {
     return /^\[.*\]$/.test(this.typeString);
   }
 
+  toString() /* t:string */ {
+    return this.typeString;
+  }
+
   extractGenericMapGivenType(type /* t:TDType */) /* t:any */ {
     let genericMap = {};
 
@@ -128,7 +133,7 @@ export class TDType {
     return genericMap;
   }
 
-  isSubclassOf(otherType /* t:TDType */) /* t:Boolean */ {
+  isSubclassOf(otherType /* t:TDType */) /* t:boolean */ {
     const expectedType /* t:String */ = this.typeList.join(' ');
     const actualType /* t:String */ = otherType.typeList.join(' ');
 
