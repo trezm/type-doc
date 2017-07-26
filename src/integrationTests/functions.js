@@ -3,7 +3,7 @@ import { expect } from 'chai';
 import { TDTypeChecker } from '../lib/TDTypeChecker';
 
 describe('functions', () => {
-  describe('should test return values of arguments', () => {
+  describe('return values and arguments', () => {
     it('should allow arguments and not throw errors', () => {
       const errors = new TDTypeChecker(`
 function add(x /* t:number */, y /* t:number */) /* t:number */ {

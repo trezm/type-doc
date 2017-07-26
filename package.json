@@ -1,17 +1,16 @@
 {
   "name": "type-doc",
-  "version": "0.1.39",
+  "version": "0.1.40",
   "description": "Static typechecking in valid javascript",
   "main": "dist/main.js",
   "bin": {
     "type-doc": "bin/type-doc"
   },
   "scripts": {
-    "docs": "gulp docs && node docs/src/server/server.js",
-    "docs:devtool": "gulp docs && node_modules/.bin/devtool docs/src/server/server.js",
-    "prepublish": "gulp release",
-    "test": "gulp test",
-    "start": "gulp; node dist/main.js"
+    "build:dev": "node_modules/.bin/gulp build:dev",
+    "prepublish": "node_modules/.bin/gulp release",
+    "test": "node_modules/.bin/gulp test",
+    "start": "node_modules/.bin/gulp; node dist/main.js"
   },
   "author": "",
   "license": "MIT",
@@ -25,7 +24,7 @@
   "devDependencies": {
     "babel-preset-es2015": "6.14.0",
     "chai": "3.5.0",
-    "gulp": "3.9.1",
+    "gulp": "^3.9.1",
     "gulp-babel": "6.1.2",
     "gulp-clean": "0.3.2",
     "gulp-env": "0.4.0",
@@ -33,7 +32,7 @@
     "gulp-load-plugins": "1.2.4",
     "gulp-mocha": "3.0.1",
     "gulp-plumber": "1.1.0",
-    "gulp-sourcemaps": "2.6.0",
+    "gulp-sourcemaps": "^2.6.0",
     "jscs": "3.0.7",
     "mocha": "3.0.2",
     "run-sequence": "1.2.2",

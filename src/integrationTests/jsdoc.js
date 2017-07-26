@@ -160,7 +160,7 @@ class TestClass {
   /**
    * Add two numbers
    *
-   * @memberOf TestClass
+   * @memberof TestClass
    * @param {number} a - The first number
    * @param {number} b - The second number
    * @returns {number} - the sum of the arguments

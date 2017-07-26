@@ -249,5 +249,20 @@ export function findReturnType(node, errors=[]) {
 }
 
 export function findTypeForExpression(expression) {
-  return findTypeForNode(expression.right);
+  const leftType = findTypeForNode(expression.left);
+  const rightType = findTypeForNode(expression.right);
+  const operator = expression.operator;
+
+  if (expression.type === 'BinaryExpression') {
+    if (operator === '===' || operator === '==') {
+      return new TDType('boolean');
+    } else if (leftType.typeString === 'number' &&
+      rightType.typeString === 'number') {
+      return leftType;
+    } else {
+      return new TDType('string');
+    }
+  } else {
+    return rightType;
+  }
 }
