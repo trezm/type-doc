@@ -1,3 +1,6 @@
+machine:
+  node:
+    version: 8.1.1
 test:
   pre:
     - gulp build:dev

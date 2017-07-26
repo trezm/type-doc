@@ -51,7 +51,7 @@ export class TDTypeAdapter {
       case 'MethodDefinition': {
         node.value.body.body.forEach((statement) => this._assignDeclarationTypes(statement));
         node.value.params.forEach((param) => this._addTypeToParameter(param));
-        this._addTypeToFunction(node.value, node.key);
+        this._addTypeToFunction(node.value, node.key, node.kind === 'get');
         this._addJSDocTypeToClassMethod(node);
 
         let signature = node.value.params.map((param) => param.tdType.typeString);
@@ -361,7 +361,7 @@ export class TDTypeAdapter {
     node.tdType = foundType ? this._extractType(foundType.value, TYPEDEF_REGEX) : new TDType();
   }
 
-  _addTypeToFunction(node, identifier) {
+  _addTypeToFunction(node, identifier, isGetter) {
     if (!identifier) {
       node.tdType = TDType.any();
       return;
@@ -391,7 +391,12 @@ export class TDTypeAdapter {
 
     if (!paramTypes.length) { paramTypes = ['any']; }
 
-    node.tdType = new TDType(paramTypes.concat([type]).join(' -> '));
+    if (isGetter) {
+      node.tdType = new TDType(type);
+    } else {
+      node.tdType = new TDType(paramTypes.concat([type]).join(' -> '));
+    }
+
     if (identifier) {
       identifier.tdType = node.tdType;
     }

@@ -102,10 +102,10 @@ export class TDClassType extends TDType {
   }
 
   isSubclassOf(otherType /* t:TDType */) /* t:boolean */ {
-    const isSubclassOfProto = this.__proto__ &&
-      this.__proto__.__proto__ &&
-      this.__proto__.__proto__.isSubclassOf &&
-      this.__proto__.__proto__.isSubclassOf(otherType)
+    const isSubclassOfProto = Reflect.getPrototypeOf(this) &&
+      Reflect.getPrototypeOf(Reflect.getPrototypeOf(this)) &&
+      Reflect.getPrototypeOf(Reflect.getPrototypeOf(this)).isSubclassOf &&
+      Reflect.getPrototypeOf(Reflect.getPrototypeOf(this)).isSubclassOf(otherType)
 
     return (!this.isAny && !otherType.isAny && isSubclassOfProto) || this.isDucktypeOf(otherType);
   }

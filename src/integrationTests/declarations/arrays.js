@@ -11,6 +11,15 @@ var s /* t:string */ = new Array(10).map(() => 'a').join('');
     expect(errors.length).to.equal(0);
   });
 
+  it('should be able to do a simple join', () => {
+    const errors = new TDTypeChecker(`
+const somestringArray /* t:Array String */ = ['hello'];
+const joinedString /* t:string */ = somestringArray.join(' ');
+`).run();
+
+    expect(errors.length).to.equal(0);
+  });
+
   it('should be able to detect inconsistency after a join', () => {
     const errors = new TDTypeChecker(`
 var s /* t:number */ = new Array(10).map(() => 'a').join('');

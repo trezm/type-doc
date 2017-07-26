@@ -134,8 +134,8 @@ export class TDType {
   }
 
   isSubclassOf(otherType /* t:TDType */) /* t:boolean */ {
-    const expectedType /* t:String */ = this.typeList.join(' ');
-    const actualType /* t:String */ = otherType.typeList.join(' ');
+    const expectedType /* t:string */ = this.typeList.join(' ');
+    const actualType /* t:string */ = otherType.typeList.join(' ');
 
     const allowedTypes = (expectedType || 'any')
       .split('|')

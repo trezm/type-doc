@@ -23,10 +23,10 @@
       "program": "${workspaceRoot}/bin/type-doc",
       "stopOnEntry": false,
       "args": [
-        "../consumer-web/src/controllers/api/v4/shortcodes.js"
+        "./src/main.js"
       ],
       "cwd": "${workspaceRoot}",
-      "preLaunchTask": "build:dev",
+      // "preLaunchTask": "build:dev",
       "runtimeExecutable": null,
       "runtimeArgs": [],
       "env": {

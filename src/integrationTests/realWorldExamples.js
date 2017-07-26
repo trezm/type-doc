@@ -60,5 +60,28 @@ function main() {
 
     expect(errors[0].extras.expectedType).to.equal('string');
     expect(errors[0].extras.actualType).to.equal('number');
-  })
+  });
+
+  it('should work with class properties and built in definitions with getters', () => {
+    const errors = new TDTypeChecker(`
+/**
+ * class :: TDType
+ *   typeList :: Array string
+ *   isSubclassOf :: TDType -> boolean
+ */
+export class TDType {
+  get typeList() /* t:Array String */ {
+    return ['hi'];
+  }
+
+  isSubclassOf() /* t:boolean */ {
+    const expectedType /* t:string */ = this.typeList.join(' ');
+    return false;
+  }
+}
+`).run();
+
+    console.log('errors:', JSON.stringify(errors, null, 2));
+    expect(errors.length).to.equal(0);
+  });
 });
