@@ -12,6 +12,7 @@ const JSDOC_PARAMS_REGEX = /@param\s*\{[^\}]+\}\s*[^\s]+/g;
 const JSDOC_CLASSES_REGEX = /@class\s*([^\s\]]+)/g;
 const JSDOC_SINGLE_PARAM_REGEX = /@param\s*\{([^\}]+)\}\s*\[?([^\s\]]+)\]?/;
 const JSDOC_SINGLE_CLASS_REGEX = /@class\s*([^\s\]]+)/;
+const JSDOC_MEMBER_REGEX = /@member\s*\{([^\}]+)\}/;
 const JSDOC_MEMBEROF_REGEX = /@memberof\s*([^\s\]]+)/i;
 const JSDOC_RETURNS_REGEX = /@returns\s*\{([^\}]+)\}/;
 const JSDOC_TYPE_REGEX = /@type\s*\{([^\}]+)\}/;
@@ -42,14 +43,14 @@ export class TDTypeAdapter {
     return this._ast;
   }
 
-  _assignDeclarationTypes(node) {
+  _assignDeclarationTypes(node, thisNode) {
     if (!node) {
       return;
     }
 
     switch (node.type) {
       case 'MethodDefinition': {
-        node.value.body.body.forEach((statement) => this._assignDeclarationTypes(statement));
+        node.value.body.body.forEach((statement) => this._assignDeclarationTypes(statement, thisNode));
         node.value.params.forEach((param) => this._addTypeToParameter(param));
         this._addTypeToFunction(node.value, node.key, node.kind === 'get');
         this._addJSDocTypeToClassMethod(node);
@@ -62,44 +63,45 @@ export class TDTypeAdapter {
         return;
       }
       case 'Program':
-        node.body.forEach((statement) => this._assignDeclarationTypes(statement));
+        node.body.forEach((statement) => this._assignDeclarationTypes(statement, thisNode));
         return;
       case 'ClassDeclaration': {
         this._addTypeToClass(node);
         this._addJSDocTypeToClass(node);
-        node.body.body.forEach((statement) => this._assignDeclarationTypes(statement));
+        node.body.body.forEach((statement) => this._assignDeclarationTypes(statement, node));
         return;
       }
       case 'FunctionExpression':
+        thisNode = node;
       case 'ArrowFunctionExpression': {
         const body = node.body && node.body.body || [node.body];
-        body.forEach((statement) => this._assignDeclarationTypes(statement));
+        body.forEach((statement) => this._assignDeclarationTypes(statement, thisNode));
         node.params.forEach((param) => this._addTypeToParameter(param));
         this._addTypeToFunction(node, node.id);
         this._addJSDocTypeToFunction(node);
         return;
       }
       case 'FunctionDeclaration': {
-        node.body.body.forEach((statement) => this._assignDeclarationTypes(statement));
+        node.body.body.forEach((statement) => this._assignDeclarationTypes(statement, node));
         node.params.forEach((param) => this._addTypeToParameter(param));
         this._addTypeToFunction(node, node.id);
         this._addJSDocTypeToFunction(node);
         return;
       }
       case 'ExpressionStatement': {
-        this._assignDeclarationTypes(node.expression);
+        this._assignDeclarationTypes(node.expression, thisNode);
         return;
       }
       case 'ReturnStatement': {
-        this._assignDeclarationTypes(node.argument);
+        this._assignDeclarationTypes(node.argument, thisNode);
         return;
       }
       case 'CallExpression': {
-        node.arguments.forEach((argument) => this._assignDeclarationTypes(argument));
+        node.arguments.forEach((argument) => this._assignDeclarationTypes(argument, thisNode));
         return;
       }
       case 'VariableDeclaration': {
-        node.declarations.forEach((declarator) => this._assignDeclarationTypes(declarator));
+        node.declarations.forEach((declarator) => this._assignDeclarationTypes(declarator, thisNode));
         return;
       }
       case 'VariableDeclarator': {
@@ -108,7 +110,7 @@ export class TDTypeAdapter {
           node.init.callee.name === 'require') {
           this._addTypeToRequire(node);
         } else if (node.init) {
-          this._assignDeclarationTypes(node.init);
+          this._assignDeclarationTypes(node.init, thisNode);
           this._addTypeToDeclarator(node);
           this._addJSDocTypeToDeclarator(node);
         } else {
@@ -125,7 +127,7 @@ export class TDTypeAdapter {
         if (!node.declaration) {
           this._addTypeToImport(node);
         } else {
-          this._assignDeclarationTypes(node.declaration);
+          this._assignDeclarationTypes(node.declaration, thisNode);
         }
         return;
       }
@@ -135,6 +137,15 @@ export class TDTypeAdapter {
       }
       case 'ImportSpecifier': {
         throw new Error('Unhandled ImportSpecifier');
+      }
+      case 'AssignmentExpression': {
+        this._assignDeclarationTypes(node.left, thisNode);
+        return;
+      }
+      case 'MemberExpression': {
+        if (node.object && node.object.type === 'ThisExpression') {
+          this._addJSDocTypeToMember(node, thisNode);
+        }
       }
       default:
         return;
@@ -169,6 +180,24 @@ export class TDTypeAdapter {
   /**
    * New single node methods
    */
+  _addJSDocTypeToMember(node, thisNode) {
+    const foundType = this._jsDocDefs.find((typeDef) => {
+      const commentEndLine = typeDef.loc.end.line;
+      const functionStartLine = node.loc.start.line;
+
+      return functionStartLine === commentEndLine + 1;
+    });
+
+    if (foundType) {
+      const type = (foundType.value.match(JSDOC_MEMBER_REGEX) || [])[1] || 'any';
+      node.tdType = new TDType(type);
+
+      if (thisNode && thisNode.tdType) {
+        thisNode.tdType.addPropertyOrMethod(node.property.name, node.tdType.typeString);
+      }
+    }
+  }
+
   _addJSDocTypeToDeclarator(node) {
     const foundType = this._jsDocDefs.find((typeDef) => {
       const commentEndLine = typeDef.loc.end.line;
@@ -420,12 +449,13 @@ export class TDTypeAdapter {
     return ast.comments
       .filter((comment) => {
         const classes = comment.value.match(JSDOC_CLASSES_REGEX);
+        const members = comment.value.match(JSDOC_MEMBER_REGEX);
         const params = comment.value.match(JSDOC_PARAMS_REGEX);
         const returns = comment.value.match(JSDOC_RETURNS_REGEX);
         const types = comment.value.match(JSDOC_TYPE_REGEX);
         const typedefs = comment.value.match(JSDOC_TYPEDEF_REGEX);
 
-        return classes || params || returns || types || typedefs;
+        return classes || members || params || returns || types || typedefs;
       });
   }
 

@@ -248,5 +248,29 @@ class TestClass {
       expect(errors[0].extras.property).to.equal('aBadMethod');
       expect(errors[0].extras.class).to.equal('TestClass');
     });
+
+    it('should respect member calls', () => {
+      const errors = new TDTypeChecker(`
+/**
+ * @class TestClass
+ */
+  class TestClass {
+    constructor() {
+      /** @member {string} */
+      this.someString = 'hello';
+    }
+  }
+
+  const example /* t:TestClass */ = new TestClass();
+  const someNumber /* t:number */ = example.someString;
+`).run({
+        strictClassChecks: true
+      });
+
+      expect(errors).to.exist;
+      expect(errors.length).to.equal(1);
+      expect(errors[0].extras.expectedType).to.equal('number');
+      expect(errors[0].extras.actualType).to.equal('string');
+    });
   });
 });
